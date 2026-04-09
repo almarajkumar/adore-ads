@@ -3,6 +3,7 @@ package com.adoreapps.ai.ads;
 import android.content.Context;
 
 import androidx.annotation.RawRes;
+import androidx.annotation.XmlRes;
 
 import com.adoreapps.ai.ads.model.PurchaseModel;
 
@@ -33,6 +34,14 @@ public class AdoreAdsConfig {
     private final boolean useTestAdIds;
     private final boolean showLoadingDialog;
     private final @RawRes int loadingAnimationRes;
+    private final boolean nativeAutoRefreshEnabled;
+
+    // Facebook
+    private final boolean facebookEnabled;
+
+    // Remote Config
+    private final boolean remoteConfigEnabled;
+    private final @XmlRes int remoteConfigDefaultsResId;
 
     // Placements
     private final Map<String, PlacementConfig> nativePlacements;
@@ -76,6 +85,10 @@ public class AdoreAdsConfig {
         this.useTestAdIds = builder.useTestAdIds;
         this.showLoadingDialog = builder.showLoadingDialog;
         this.loadingAnimationRes = builder.loadingAnimationRes;
+        this.nativeAutoRefreshEnabled = builder.nativeAutoRefreshEnabled;
+        this.facebookEnabled = builder.facebookEnabled;
+        this.remoteConfigEnabled = builder.remoteConfigEnabled;
+        this.remoteConfigDefaultsResId = builder.remoteConfigDefaultsResId;
         this.nativePlacements = builder.nativePlacements;
         this.interstitialPlacements = builder.interstitialPlacements;
         this.rewardPlacements = builder.rewardPlacements;
@@ -106,6 +119,12 @@ public class AdoreAdsConfig {
     public boolean isUseTestAdIds() { return useTestAdIds; }
     public boolean isShowLoadingDialog() { return showLoadingDialog; }
     public @RawRes int getLoadingAnimationRes() { return loadingAnimationRes; }
+    public boolean isNativeAutoRefreshEnabled() { return nativeAutoRefreshEnabled; }
+
+    public boolean isFacebookEnabled() { return facebookEnabled; }
+
+    public boolean isRemoteConfigEnabled() { return remoteConfigEnabled; }
+    public @XmlRes int getRemoteConfigDefaultsResId() { return remoteConfigDefaultsResId; }
 
     public Map<String, PlacementConfig> getNativePlacements() { return nativePlacements; }
     public Map<String, PlacementConfig> getInterstitialPlacements() { return interstitialPlacements; }
@@ -152,7 +171,13 @@ public class AdoreAdsConfig {
         private boolean adsEnabled = true;
         private boolean useTestAdIds = false;
         private boolean showLoadingDialog = true;
-        private @RawRes int loadingAnimationRes = 0; // 0 = use bundled default
+        private @RawRes int loadingAnimationRes = 0;
+        private boolean nativeAutoRefreshEnabled = true;
+
+        private boolean facebookEnabled = true;
+
+        private boolean remoteConfigEnabled = false;
+        private @XmlRes int remoteConfigDefaultsResId = 0;
 
         private final Map<String, PlacementConfig> nativePlacements = new HashMap<>();
         private final Map<String, PlacementConfig> interstitialPlacements = new HashMap<>();
@@ -193,6 +218,14 @@ public class AdoreAdsConfig {
         public Builder setUseTestAdIds(boolean useTest) { this.useTestAdIds = useTest; return this; }
         public Builder setShowLoadingDialog(boolean show) { this.showLoadingDialog = show; return this; }
         public Builder setLoadingAnimationRes(@RawRes int res) { this.loadingAnimationRes = res; return this; }
+        public Builder setNativeAutoRefreshEnabled(boolean enabled) { this.nativeAutoRefreshEnabled = enabled; return this; }
+
+        // Facebook (SDK init + event logging — default true)
+        public Builder setFacebookEnabled(boolean enabled) { this.facebookEnabled = enabled; return this; }
+
+        // Remote Config
+        public Builder setRemoteConfigEnabled(boolean enabled) { this.remoteConfigEnabled = enabled; return this; }
+        public Builder setRemoteConfigDefaultsResId(@XmlRes int resId) { this.remoteConfigDefaultsResId = resId; return this; }
 
         // Placements
         public Builder addNativePlacement(String key, PlacementConfig config) {

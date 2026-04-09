@@ -15,6 +15,7 @@ Full-featured Android ad monetization library with AdMob, mediation, auto-refres
 - **In-App Billing** — Google Play Billing for premium check
 - **Adjust Attribution** — Ad revenue and purchase tracking
 - **Firebase Analytics & Crashlytics** — Built-in event tracking
+- **Firebase Remote Config** — Dynamic ad placements, toggles, and ad unit IDs from console
 - **Centralized Constants** — All timing, expiry, and test IDs in `AdConstants`
 
 ## Installation
@@ -41,6 +42,7 @@ AdoreAds.init(this, new AdoreAdsConfig.Builder(this)
         Arrays.asList("high_floor_id", "low_floor_id"), true))
     .setDefaultNativeAdId("default_fallback_id")
     .setInterstitialCooldownSeconds(30)
+    .setRemoteConfigEnabled(true)
     .setConsentTestDeviceHashedId("YOUR_HASHED_DEVICE_ID")
     .setPurchaseProducts(purchaseList)
     .build());

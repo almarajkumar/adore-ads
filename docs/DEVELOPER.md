@@ -36,7 +36,7 @@ com.adoreapps.ai.ads/
 │
 ├── settings/
 │   ├── AdConstants.java           <- Centralized timing, expiry, and test ad ID constants
-│   ├── AdSettingsStore.java       <- Thread-safe SharedPreferences wrapper
+│   ├── AdSettingsStore.java       <- Thread-safe SharedPreferences wrapper (refresh interval updated by remote config)
 │   ├── AdsConfig.java             <- Production ad unit IDs (immutable)
 │   ├── AdUnitsConfig.java         <- List<adUnitIds> + analytics event names
 │   └── AdStatus.java              <- IDLE, LOADING, LOADED, FAILED
@@ -52,7 +52,8 @@ com.adoreapps.ai.ads/
 │
 ├── model/
 │   ├── AdsResponse.java           <- Generic ad + unitID + priority wrapper
-│   └── PurchaseModel.java         <- productId + productType for billing
+│   ├── PurchaseModel.java         <- productId + productType for billing
+│   └── RemoteAdUnit.java          <- JSON model for remote config ad unit overrides
 │
 ├── interfaces/
 │   ├── AdFinished.java            <- onAdFinished(), onAdFailed()
@@ -64,7 +65,7 @@ com.adoreapps.ai.ads/
 │   └── WelcomeBackDialog.java     <- App open resume dialog
 │
 └── utils/
-    ├── RemoteConfigManager.java   <- Firebase Remote Config wrapper
+    ├── RemoteConfigManager.java   <- Firebase Remote Config with typed getters + auto-apply
     └── SharePrefUtils.java        <- Persistent key-value storage
 ```
 
@@ -84,6 +85,48 @@ ads.consent()          // ConsentManager.getInstance(app)
 ads.purchases()        // PurchaseManager.getInstance()
 ads.defaultPool()      // DefaultAdPool.getInstance()
 ads.core()             // AdsMobileAdsManager.getInstance()
+```
+
+## Remote Config Integration
+
+The library auto-reads Firebase Remote Config keys prefixed with `adore_` and applies them to managers.
+
+### Flow
+```
+1. AdoreAds.init() with remoteConfigEnabled=true
+   '-- Auto-calls fetchRemoteConfig() after SDK init
+
+2. fetchRemoteConfig(listener)
+   |-- Sets XML defaults if configured
+   |-- Calls FirebaseRemoteConfig.fetchAndActivate()
+   '-- On complete: calls applyRemoteConfig()
+
+3. applyRemoteConfig()
+   |-- Reads global toggles: adore_ads_enabled, adore_interstitial_cooldown, etc.
+   |-- For each registered placement:
+   |   |-- Checks adore_{type}_{KEY}_enabled -> PlacementConfig.setEnabled()
+   |   '-- Checks adore_{type}_{KEY}_ads -> JSON -> RemoteAdUnit.toSortedAdIds()
+   |        -> PlacementConfig.setAdUnitIds()
+   '-- Re-pushes updated config to all managers via populateFromConfig()
+```
+
+### RemoteAdUnit JSON Format
+```json
+[
+  { "ad_id": "ca-app-pub-.../high", "priority": "high", "is_enabled": true },
+  { "ad_id": "ca-app-pub-.../low", "priority": "low", "is_enabled": true }
+]
+```
+
+`RemoteAdUnit.toSortedAdIds(json)` filters enabled entries, sorts by priority (high>medium>low>default), and returns ordered ID list.
+
+### App Access to Custom Keys
+```java
+// After fetchRemoteConfig completes
+AdoreAds.getInstance().remoteConfig().getString("my_custom_key", "default");
+AdoreAds.getInstance().remoteConfig().getBoolean("feature_flag", false);
+AdoreAds.getInstance().remoteConfig().getLong("timeout_ms", 5000);
+AdoreAds.getInstance().remoteConfig().getRemoteConfig(); // raw FirebaseRemoteConfig
 ```
 
 ## AdConstants
@@ -344,17 +387,19 @@ version = '1.1.0'  // Change here
 
 | Category | Package | Version |
 |----------|---------|---------|
-| **AdMob** | play-services-ads | 24.9.0 |
+| **AdMob** | play-services-ads | 25.1.0 |
 | **Facebook** | audience-network-sdk | 6.21.0 |
-| **AppLovin** | mediation:applovin | 13.5.1.0 |
-| **Vungle** | mediation:vungle | 7.6.3.1 |
-| **Mintegral** | mediation:mintegral | 17.0.61.1 |
-| **Pangle** | mediation:pangle | 7.8.5.9.0 |
-| **Unity** | unity-ads + mediation | 4.16.6 |
-| **Firebase** | analytics, crashlytics, remote-config | BOM 34.8.0 |
+| **AppLovin** | mediation:applovin | 13.6.2.0 |
+| **Vungle** | mediation:vungle | 7.7.2.0 |
+| **Mintegral** | mediation:mintegral | 17.1.31.0 |
+| **Pangle** | mediation:pangle | 7.9.1.3.0 |
+| **Unity** | unity-ads + mediation | 4.17.0 |
+| **Firebase** | analytics, crashlytics, remote-config | BOM 34.11.0 |
 | **UMP** | user-messaging-platform | 4.0.0 |
-| **Billing** | billing | 8.0.0 |
-| **Adjust** | adjust-android | 5.5.0 |
+| **Billing** | billing | 8.3.0 |
+| **Adjust** | adjust-android | 5.6.0 |
 | **Shimmer** | shimmer | 0.5.0 |
-| **Lottie** | lottie | 6.6.2 |
-| **Gson** | gson | 2.11.0 |
+| **Lottie** | lottie | 6.7.1 |
+| **Gson** | gson | 2.13.2 |
+| **Lifecycle** | lifecycle-process | 2.10.0 |
+| **Facebook SDK** | facebook-android-sdk | 18.2.3 |

@@ -14,6 +14,7 @@ import com.adoreapps.ai.ads.PlacementConfig;
 import com.adoreapps.ai.ads.interfaces.AdFinished;
 import com.adoreapps.ai.ads.dialog.LoadingAdsDialog;
 import com.adoreapps.ai.ads.settings.AdConstants;
+import com.adoreapps.ai.ads.settings.AdSettingsStore;
 import com.adoreapps.ai.ads.settings.AdUnitsConfig;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
@@ -197,7 +198,7 @@ public class InterstitialAdManager {
             adFinished.onAdFinished();
             return;
         }
-        if (!showInterstitialAd) {
+        if (isInCooldown(activity)) {
             adFinished.onAdFinished();
             return;
         }
@@ -236,7 +237,7 @@ public class InterstitialAdManager {
             adFinished.onAdFinished();
             return;
         }
-        if (!isEnabled || interstitialAdIds == null || interstitialAdIds.isEmpty() || !showInterstitialAd) {
+        if (!isEnabled || interstitialAdIds == null || interstitialAdIds.isEmpty() || isInCooldown(activity)) {
             adFinished.onAdFinished();
             return;
         }
@@ -294,6 +295,23 @@ public class InterstitialAdManager {
         );
     }
 
+    /**
+     * Check if interstitial is in cooldown (persisted across process death).
+     */
+    private boolean isInCooldown(Activity activity) {
+        if (activity == null) return false;
+        long cooldownEnd = AdSettingsStore.getInstance(activity)
+                .getLong(AdConstants.PREF_INTERSTITIAL_COOLDOWN_END, 0);
+        return System.currentTimeMillis() < cooldownEnd;
+    }
+
+    private void startCooldown(Activity activity) {
+        if (activity == null) return;
+        long cooldownEnd = System.currentTimeMillis() + (cooldownSeconds * 1000);
+        AdSettingsStore.getInstance(activity)
+                .setLong(AdConstants.PREF_INTERSTITIAL_COOLDOWN_END, cooldownEnd);
+    }
+
     public void show(Activity activity, InterstitialAd interstitialAd, Runnable showNextScreen) {
         if (interstitialAd != null) {
             AdsMobileAdsManager.getInstance().showInterstitial(
@@ -303,11 +321,7 @@ public class InterstitialAdManager {
                         @Override
                         public void onNextScreen() {
                             super.onNextScreen();
-                            showInterstitialAd = false;
-                            new Handler(Looper.getMainLooper()).postDelayed(
-                                    () -> showInterstitialAd = true,
-                                    cooldownSeconds * 1000
-                            );
+                            startCooldown(activity);
                             if (showNextScreen != null) showNextScreen.run();
                         }
 

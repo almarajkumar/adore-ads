@@ -9,7 +9,7 @@ import java.util.List;
  * and analytics event names.
  */
 public class PlacementConfig {
-    private final List<String> adUnitIds;
+    private List<String> adUnitIds;
     private boolean enabled;
     private final String viewEventName;
     private final String clickEventName;
@@ -35,4 +35,14 @@ public class PlacementConfig {
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public String getViewEventName() { return viewEventName; }
     public String getClickEventName() { return clickEventName; }
+
+    /**
+     * Replace the ad unit IDs list (e.g. from remote config override).
+     */
+    public void setAdUnitIds(List<String> ids) {
+        this.adUnitIds.clear();
+        if (ids != null) {
+            this.adUnitIds.addAll(ids);
+        }
+    }
 }

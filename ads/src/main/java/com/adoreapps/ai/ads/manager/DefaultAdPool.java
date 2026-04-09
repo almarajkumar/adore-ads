@@ -1,12 +1,8 @@
 package com.adoreapps.ai.ads.manager;
 
-import com.adoreapps.ai.ads.settings.AdConstants;
-import com.adoreapps.ai.ads.settings.AdSettingsStore;
-import com.adoreapps.ai.ads.settings.AdsConfig;
-
-import com.adoreapps.ai.ads.core.AdsMobileAdsManager;
-
 import android.app.Activity;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -21,6 +17,9 @@ import com.adoreapps.ai.ads.wrapper.ApAdNative;
 import com.adoreapps.ai.ads.wrapper.ApInterstitialAd;
 import com.adoreapps.ai.ads.consent.ConsentManager;
 import com.adoreapps.ai.ads.billing.PurchaseManager;
+import com.adoreapps.ai.ads.settings.AdConstants;
+import com.adoreapps.ai.ads.settings.AdSettingsStore;
+import com.adoreapps.ai.ads.settings.AdsConfig;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.nativead.NativeAd;
@@ -32,14 +31,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Global fallback ad pool. Preloads one default ad per type (native, interstitial, reward)
+ * Global fallback ad pool. Preloads up to {@link AdConstants#POOL_MAX_CACHE_SIZE} ads per type
  * at app startup. When position-specific ads fail, callers can pull from this pool.
- * After an ad is consumed, the pool auto-replenishes.
+ * After an ad is consumed, the pool auto-replenishes with retry backoff.
  */
 public class DefaultAdPool {
 
     private static final String TAG = "DefaultAdPool";
-    private static final long AD_EXPIRY_MS = AdConstants.AD_EXPIRY_MS;
 
     private static volatile DefaultAdPool instance;
 
@@ -59,29 +57,32 @@ public class DefaultAdPool {
     // =========================================================
     // NATIVE
     // =========================================================
-    private volatile AdsResponse<NativeAd> cachedNativeAd;
-    private volatile long nativeLoadTime;
+    private final List<AdsResponse<NativeAd>> cachedNativeAds = new ArrayList<>();
+    private final List<Long> nativeLoadTimes = new ArrayList<>();
     private volatile boolean nativeLoading;
+    private int nativeRetryCount = 0;
 
     // =========================================================
     // INTERSTITIAL
     // =========================================================
-    private volatile InterstitialAd cachedInterstitialAd;
-    private volatile long interstitialLoadTime;
+    private final List<InterstitialAd> cachedInterstitialAds = new ArrayList<>();
+    private final List<Long> interstitialLoadTimes = new ArrayList<>();
     private volatile boolean interstitialLoading;
+    private int interstitialRetryCount = 0;
 
     // =========================================================
     // REWARD
     // =========================================================
-    private volatile RewardedAd cachedRewardAd;
-    private volatile long rewardLoadTime;
+    private final List<RewardedAd> cachedRewardAds = new ArrayList<>();
+    private final List<Long> rewardLoadTimes = new ArrayList<>();
     private volatile boolean rewardLoading;
+    private int rewardRetryCount = 0;
 
-    // Keep a weak ref to activity for re-preloading
     private WeakReference<Activity> activityRef;
+    private final Handler retryHandler = new Handler(Looper.getMainLooper());
 
     // =========================================================
-    // INIT — call once from SplashScreenActivity
+    // INIT
     // =========================================================
 
     public void init(Activity activity) {
@@ -116,26 +117,22 @@ public class DefaultAdPool {
     }
 
     private boolean isExpired(long loadTime) {
-        return loadTime == 0 || (System.currentTimeMillis() - loadTime) > AD_EXPIRY_MS;
+        return loadTime == 0 || (System.currentTimeMillis() - loadTime) > AdConstants.AD_EXPIRY_MS;
     }
 
     private String getAdId(String defaultId) {
-        if (AdsMobileAdsManager.getInstance().isUseTestAdIds()) {
-            return AdConstants.TEST_NATIVE_AD_ID;
-        }
-        return defaultId;
+        return AdsMobileAdsManager.getInstance().isUseTestAdIds()
+                ? AdConstants.TEST_NATIVE_AD_ID : defaultId;
     }
 
     private String getInterstitialTestId() {
         return AdsMobileAdsManager.getInstance().isUseTestAdIds()
-                ? AdConstants.TEST_INTERSTITIAL_AD_ID
-                : AdsConfig.interstitialDefaultId;
+                ? AdConstants.TEST_INTERSTITIAL_AD_ID : AdsConfig.interstitialDefaultId;
     }
 
     private String getRewardTestId() {
         return AdsMobileAdsManager.getInstance().isUseTestAdIds()
-                ? AdConstants.TEST_REWARD_AD_ID
-                : AdsConfig.rewardDefaultId;
+                ? AdConstants.TEST_REWARD_AD_ID : AdsConfig.rewardDefaultId;
     }
 
     @Nullable
@@ -143,70 +140,79 @@ public class DefaultAdPool {
         return activityRef != null ? activityRef.get() : null;
     }
 
+    private long getRetryDelay(int retryCount) {
+        return AdConstants.POOL_RETRY_BASE_DELAY_MS * (1L << Math.min(retryCount, AdConstants.POOL_MAX_RETRY_ATTEMPTS - 1));
+    }
+
     // =========================================================
     // NATIVE — preload / get / replenish
     // =========================================================
 
-    public void preloadNative(Activity activity) {
-        if (nativeLoading || (cachedNativeAd != null && !isExpired(nativeLoadTime))) return;
+    public synchronized void preloadNative(Activity activity) {
+        if (nativeLoading) return;
+        // Remove expired ads
+        cleanExpired(cachedNativeAds, nativeLoadTimes);
+        if (cachedNativeAds.size() >= AdConstants.POOL_MAX_CACHE_SIZE) return;
         if (!canLoad(activity)) return;
 
         nativeLoading = true;
         String adId = getAdId(AdsConfig.nativeDefaultId);
-        Log.d(TAG, "Preloading default native: " + adId);
+        Log.d(TAG, "Preloading default native (" + (cachedNativeAds.size() + 1) + "/" + AdConstants.POOL_MAX_CACHE_SIZE + "): " + adId);
 
         AdsMobileAdsManager.getInstance().loadUnifiedNativeAd(activity, adId, new AdCallback() {
             @Override
             public void onNativeAds(ApAdNative nativeAd) {
                 super.onNativeAds(nativeAd);
-                cachedNativeAd = new AdsResponse<>(nativeAd.getNativeAd(), adId);
-                nativeLoadTime = System.currentTimeMillis();
-                nativeLoading = false;
-                Log.d(TAG, "Default native preloaded");
+                synchronized (DefaultAdPool.this) {
+                    cachedNativeAds.add(new AdsResponse<>(nativeAd.getNativeAd(), adId));
+                    nativeLoadTimes.add(System.currentTimeMillis());
+                    nativeLoading = false;
+                    nativeRetryCount = 0;
+                    Log.d(TAG, "Default native preloaded (" + cachedNativeAds.size() + "/" + AdConstants.POOL_MAX_CACHE_SIZE + ")");
+                }
+                // Fill up to max
+                if (cachedNativeAds.size() < AdConstants.POOL_MAX_CACHE_SIZE) {
+                    preloadNative(activity);
+                }
             }
 
             @Override
             public void onAdFailedToLoad(@NonNull ApAdError error) {
                 super.onAdFailedToLoad(error);
-                nativeLoading = false;
-                Log.w(TAG, "Default native preload failed");
+                synchronized (DefaultAdPool.this) {
+                    nativeLoading = false;
+                }
+                scheduleRetry(() -> {
+                    Activity a = getActivity();
+                    if (a != null) preloadNative(a);
+                }, nativeRetryCount++);
             }
         });
     }
 
-    public boolean hasDefaultNative() {
-        if (cachedNativeAd == null || isExpired(nativeLoadTime)) return false;
+    public synchronized boolean hasDefaultNative() {
+        cleanExpired(cachedNativeAds, nativeLoadTimes);
+        if (cachedNativeAds.isEmpty()) return false;
         Activity activity = getActivity();
         if (activity == null) return false;
         return AdSettingsStore.getInstance(activity).getBoolean("preload_default_native", true);
     }
 
-    /**
-     * Returns the cached default native ad and clears the pool.
-     * Triggers auto-replenish in background.
-     * Caller must validate activity with canServe() before showing.
-     */
     @Nullable
-    public AdsResponse<NativeAd> consumeDefaultNativeAd(Activity activity) {
+    public synchronized AdsResponse<NativeAd> consumeDefaultNativeAd(Activity activity) {
         if (!canServe(activity)) return null;
         if (!AdSettingsStore.getInstance(activity).getBoolean("preload_default_native", true)) return null;
-        if (cachedNativeAd == null || isExpired(nativeLoadTime)) {
-            // Expired — destroy and replenish
-            if (cachedNativeAd != null) {
-                cachedNativeAd.getAds().destroy();
-                cachedNativeAd = null;
-            }
+        cleanExpired(cachedNativeAds, nativeLoadTimes);
+
+        if (cachedNativeAds.isEmpty()) {
             preloadNative(activity);
             return null;
         }
 
-        AdsResponse<NativeAd> ad = cachedNativeAd;
-        cachedNativeAd = null;
-        nativeLoadTime = 0;
-
-        // Auto-replenish
+        AdsResponse<NativeAd> ad = cachedNativeAds.remove(0);
+        nativeLoadTimes.remove(0);
         preloadNative(activity);
-        Log.d(TAG, "Default native consumed, replenishing");
+        Log.d(TAG, "Default native consumed, remaining: " + cachedNativeAds.size());
         return ad;
     }
 
@@ -214,8 +220,10 @@ public class DefaultAdPool {
     // INTERSTITIAL — preload / get / replenish
     // =========================================================
 
-    public void preloadInterstitial(Activity activity) {
-        if (interstitialLoading || (cachedInterstitialAd != null && !isExpired(interstitialLoadTime))) return;
+    public synchronized void preloadInterstitial(Activity activity) {
+        if (interstitialLoading) return;
+        cleanExpiredSimple(cachedInterstitialAds, interstitialLoadTimes);
+        if (cachedInterstitialAds.size() >= AdConstants.POOL_MAX_CACHE_SIZE) return;
         if (!canLoad(activity)) return;
 
         interstitialLoading = true;
@@ -228,51 +236,63 @@ public class DefaultAdPool {
             @Override
             public void onResultInterstitialAd(ApInterstitialAd interstitialAd) {
                 super.onResultInterstitialAd(interstitialAd);
-                cachedInterstitialAd = interstitialAd.getInterstitialAd();
-                interstitialLoadTime = System.currentTimeMillis();
-                interstitialLoading = false;
-                Log.d(TAG, "Default interstitial preloaded");
+                synchronized (DefaultAdPool.this) {
+                    cachedInterstitialAds.add(interstitialAd.getInterstitialAd());
+                    interstitialLoadTimes.add(System.currentTimeMillis());
+                    interstitialLoading = false;
+                    interstitialRetryCount = 0;
+                    Log.d(TAG, "Default interstitial preloaded (" + cachedInterstitialAds.size() + "/" + AdConstants.POOL_MAX_CACHE_SIZE + ")");
+                }
+                if (cachedInterstitialAds.size() < AdConstants.POOL_MAX_CACHE_SIZE) {
+                    preloadInterstitial(activity);
+                }
             }
 
             @Override
             public void onAdFailedToLoad(@NonNull ApAdError error) {
                 super.onAdFailedToLoad(error);
-                interstitialLoading = false;
-                Log.w(TAG, "Default interstitial preload failed");
+                synchronized (DefaultAdPool.this) {
+                    interstitialLoading = false;
+                }
+                scheduleRetry(() -> {
+                    Activity a = getActivity();
+                    if (a != null) preloadInterstitial(a);
+                }, interstitialRetryCount++);
             }
 
             @Override
             public void onNextScreen() {
                 super.onNextScreen();
-                interstitialLoading = false;
+                synchronized (DefaultAdPool.this) {
+                    interstitialLoading = false;
+                }
             }
         });
     }
 
-    public boolean hasDefaultInterstitial() {
-        if (cachedInterstitialAd == null || isExpired(interstitialLoadTime)) return false;
+    public synchronized boolean hasDefaultInterstitial() {
+        cleanExpiredSimple(cachedInterstitialAds, interstitialLoadTimes);
+        if (cachedInterstitialAds.isEmpty()) return false;
         Activity activity = getActivity();
         if (activity == null) return false;
         return AdSettingsStore.getInstance(activity).getBoolean("preload_default_interstitial", true);
     }
 
     @Nullable
-    public InterstitialAd consumeDefaultInterstitialAd(Activity activity) {
+    public synchronized InterstitialAd consumeDefaultInterstitialAd(Activity activity) {
         if (!canServe(activity)) return null;
         if (!AdSettingsStore.getInstance(activity).getBoolean("preload_default_interstitial", true)) return null;
-        if (cachedInterstitialAd == null || isExpired(interstitialLoadTime)) {
-            cachedInterstitialAd = null;
+        cleanExpiredSimple(cachedInterstitialAds, interstitialLoadTimes);
+
+        if (cachedInterstitialAds.isEmpty()) {
             preloadInterstitial(activity);
             return null;
         }
 
-        InterstitialAd ad = cachedInterstitialAd;
-        cachedInterstitialAd = null;
-        interstitialLoadTime = 0;
-
-        // Auto-replenish
+        InterstitialAd ad = cachedInterstitialAds.remove(0);
+        interstitialLoadTimes.remove(0);
         preloadInterstitial(activity);
-        Log.d(TAG, "Default interstitial consumed, replenishing");
+        Log.d(TAG, "Default interstitial consumed, remaining: " + cachedInterstitialAds.size());
         return ad;
     }
 
@@ -280,8 +300,10 @@ public class DefaultAdPool {
     // REWARD — preload / get / replenish
     // =========================================================
 
-    public void preloadReward(Activity activity) {
-        if (rewardLoading || (cachedRewardAd != null && !isExpired(rewardLoadTime))) return;
+    public synchronized void preloadReward(Activity activity) {
+        if (rewardLoading) return;
+        cleanExpiredSimple(cachedRewardAds, rewardLoadTimes);
+        if (cachedRewardAds.size() >= AdConstants.POOL_MAX_CACHE_SIZE) return;
         if (!canLoad(activity)) return;
 
         rewardLoading = true;
@@ -294,45 +316,88 @@ public class DefaultAdPool {
             @Override
             public void onAdLoaded(@NonNull RewardedAd rewardedAd) {
                 super.onAdLoaded(rewardedAd);
-                cachedRewardAd = rewardedAd;
-                rewardLoadTime = System.currentTimeMillis();
-                rewardLoading = false;
-                Log.d(TAG, "Default reward preloaded");
+                synchronized (DefaultAdPool.this) {
+                    cachedRewardAds.add(rewardedAd);
+                    rewardLoadTimes.add(System.currentTimeMillis());
+                    rewardLoading = false;
+                    rewardRetryCount = 0;
+                    Log.d(TAG, "Default reward preloaded (" + cachedRewardAds.size() + "/" + AdConstants.POOL_MAX_CACHE_SIZE + ")");
+                }
+                if (cachedRewardAds.size() < AdConstants.POOL_MAX_CACHE_SIZE) {
+                    preloadReward(activity);
+                }
             }
 
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
                 super.onAdFailedToLoad(loadAdError);
-                rewardLoading = false;
-                Log.w(TAG, "Default reward preload failed");
+                synchronized (DefaultAdPool.this) {
+                    rewardLoading = false;
+                }
+                scheduleRetry(() -> {
+                    Activity a = getActivity();
+                    if (a != null) preloadReward(a);
+                }, rewardRetryCount++);
             }
         });
     }
 
-    public boolean hasDefaultReward() {
-        if (cachedRewardAd == null || isExpired(rewardLoadTime)) return false;
+    public synchronized boolean hasDefaultReward() {
+        cleanExpiredSimple(cachedRewardAds, rewardLoadTimes);
+        if (cachedRewardAds.isEmpty()) return false;
         Activity activity = getActivity();
         if (activity == null) return false;
         return AdSettingsStore.getInstance(activity).getBoolean("preload_default_reward", true);
     }
 
     @Nullable
-    public RewardedAd consumeDefaultRewardAd(Activity activity) {
+    public synchronized RewardedAd consumeDefaultRewardAd(Activity activity) {
         if (!canServe(activity)) return null;
         if (!AdSettingsStore.getInstance(activity).getBoolean("preload_default_reward", true)) return null;
-        if (cachedRewardAd == null || isExpired(rewardLoadTime)) {
-            cachedRewardAd = null;
+        cleanExpiredSimple(cachedRewardAds, rewardLoadTimes);
+
+        if (cachedRewardAds.isEmpty()) {
             preloadReward(activity);
             return null;
         }
 
-        RewardedAd ad = cachedRewardAd;
-        cachedRewardAd = null;
-        rewardLoadTime = 0;
-
-        // Auto-replenish
+        RewardedAd ad = cachedRewardAds.remove(0);
+        rewardLoadTimes.remove(0);
         preloadReward(activity);
-        Log.d(TAG, "Default reward consumed, replenishing");
+        Log.d(TAG, "Default reward consumed, remaining: " + cachedRewardAds.size());
         return ad;
+    }
+
+    // =========================================================
+    // RETRY & CLEANUP HELPERS
+    // =========================================================
+
+    private void scheduleRetry(Runnable retryAction, int retryCount) {
+        if (retryCount >= AdConstants.POOL_MAX_RETRY_ATTEMPTS) {
+            Log.w(TAG, "Max retry attempts reached, giving up");
+            return;
+        }
+        long delay = getRetryDelay(retryCount);
+        Log.d(TAG, "Scheduling retry in " + (delay / 1000) + "s (attempt " + (retryCount + 1) + ")");
+        retryHandler.postDelayed(retryAction, delay);
+    }
+
+    private void cleanExpired(List<AdsResponse<NativeAd>> ads, List<Long> times) {
+        for (int i = ads.size() - 1; i >= 0; i--) {
+            if (isExpired(times.get(i))) {
+                ads.get(i).getAds().destroy();
+                ads.remove(i);
+                times.remove(i);
+            }
+        }
+    }
+
+    private <T> void cleanExpiredSimple(List<T> ads, List<Long> times) {
+        for (int i = ads.size() - 1; i >= 0; i--) {
+            if (isExpired(times.get(i))) {
+                ads.remove(i);
+                times.remove(i);
+            }
+        }
     }
 }

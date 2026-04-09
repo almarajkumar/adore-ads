@@ -93,6 +93,13 @@ public class MyApp extends Application {
             .setNativeRefreshIntervalSeconds(20)
             .setAdExpiryMinutes(55)
 
+            // Remote Config (auto-fetch and apply ad settings from Firebase Console)
+            .setRemoteConfigEnabled(true)
+            .setRemoteConfigDefaultsResId(R.xml.remote_config_defaults)
+
+            // Native auto-refresh (can also be toggled via remote config)
+            .setNativeAutoRefreshEnabled(true)
+
             // Consent test device (for UMP debug — omit in production)
             .setConsentTestDeviceHashedId("YOUR_HASHED_DEVICE_ID")
 
@@ -294,6 +301,66 @@ AdoreAdsConfig updatedConfig = new AdoreAdsConfig.Builder(context)
 
 AdoreAds.getInstance().updateConfig(updatedConfig);
 ```
+
+### Firebase Remote Config
+
+The library integrates with Firebase Remote Config to dynamically control ad placements, toggles, ad unit IDs, and timing from the Firebase Console — no app update needed.
+
+**Enable in config:**
+```java
+AdoreAdsConfig config = new AdoreAdsConfig.Builder(this)
+    .setRemoteConfigEnabled(true)
+    .setRemoteConfigDefaultsResId(R.xml.remote_config_defaults) // optional XML defaults
+    .build();
+```
+
+**Fetch and apply in SplashActivity:**
+```java
+AdoreAds.getInstance().fetchRemoteConfig(success -> {
+    // All adore_* keys are automatically applied to ad managers
+    // App can also read its own custom keys:
+    String promoText = AdoreAds.getInstance().remoteConfig().getString("promo_text", "");
+    boolean showOnboarding = AdoreAds.getInstance().remoteConfig().getBoolean("show_onboarding", true);
+    proceedToHome();
+});
+```
+
+**Firebase Console key conventions:**
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `adore_ads_enabled` | boolean | Master kill-switch for all ads |
+| `adore_interstitial_cooldown` | long | Seconds between interstitial shows |
+| `adore_native_refresh_interval` | long | Native ad auto-refresh interval (seconds) |
+| `adore_native_auto_refresh_enabled` | boolean | Enable/disable native auto-refresh |
+| `adore_native_{KEY}_enabled` | boolean | Toggle a native placement on/off |
+| `adore_inter_{KEY}_enabled` | boolean | Toggle an interstitial placement |
+| `adore_reward_{KEY}_enabled` | boolean | Toggle a reward placement |
+| `adore_banner_{KEY}_enabled` | boolean | Toggle a banner placement |
+| `adore_native_{KEY}_ads` | JSON | Override ad unit IDs for a native placement |
+| `adore_inter_{KEY}_ads` | JSON | Override ad unit IDs for an interstitial placement |
+| `adore_reward_{KEY}_ads` | JSON | Override ad unit IDs for a reward placement |
+| `adore_banner_{KEY}_ads` | JSON | Override ad unit IDs for a banner placement |
+
+**JSON format for ad unit overrides** (set as string value in Firebase Console):
+
+```json
+[
+  { "ad_id": "ca-app-pub-.../high_floor", "priority": "high", "is_enabled": true },
+  { "ad_id": "ca-app-pub-.../low_floor", "priority": "low", "is_enabled": true },
+  { "ad_id": "ca-app-pub-.../test_floor", "priority": "medium", "is_enabled": false }
+]
+```
+
+Priority order: `high` > `medium` > `low` > `default`. Only entries with `is_enabled: true` are used. This lets you A/B test individual floors without an app update.
+
+**Manual apply (if you fetch remote config yourself):**
+```java
+// After your own FirebaseRemoteConfig.fetchAndActivate()
+AdoreAds.getInstance().applyRemoteConfig();
+```
+
+---
 
 ### Runtime Placement Management
 

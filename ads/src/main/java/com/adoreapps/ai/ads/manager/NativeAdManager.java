@@ -81,6 +81,9 @@ public class NativeAdManager {
     private static final long DEFAULT_REFRESH_INTERVAL = AdConstants.DEFAULT_REFRESH_INTERVAL_SECONDS;
     private static final long MIN_REFRESH_INTERVAL = AdConstants.MIN_REFRESH_INTERVAL_SECONDS;
 
+    // Auto-refresh toggle (can be disabled via config or remote config)
+    private volatile boolean autoRefreshEnabled = true;
+
     // =========================================================
     // SINGLETON (private constructor)
     // =========================================================
@@ -94,6 +97,17 @@ public class NativeAdManager {
             instance = new NativeAdManager();
         }
         return instance;
+    }
+
+    public void setAutoRefreshEnabled(boolean enabled) {
+        this.autoRefreshEnabled = enabled;
+        if (!enabled) {
+            stopAllAutoRefresh();
+        }
+    }
+
+    public boolean isAutoRefreshEnabled() {
+        return autoRefreshEnabled;
     }
 
     // =========================================================
@@ -422,6 +436,7 @@ public class NativeAdManager {
         final int totalIds = adIds.size();
         final int[] failCount = {0};
         final boolean[] highFloorFilled = {false};
+        final boolean[] callbackFired = {false};
 
         for (int i = 0; i < totalIds; i++) {
             final int priority = i; // 0 = highest floor
@@ -435,18 +450,28 @@ public class NativeAdManager {
                     super.onNativeAds(nativeAd);
                     synchronized (failCount) {
                         if (priority == 0) {
-                            // Highest floor won — always use it
+                            // Highest floor won — always cache it
+                            AdsResponse<NativeAd> prev = preloadedAds.get(position);
+                            if (prev != null && prev.getAds() != null) {
+                                prev.getAds().destroy();
+                            }
                             highFloorFilled[0] = true;
                             adStatusMap.put(position, AdStatus.LOADED);
                             preloadedAds.put(position, new AdsResponse<>(nativeAd.getNativeAd(), adId));
                             adLoadTimestamps.put(position, System.currentTimeMillis());
-                            adCallback.onNativeAds(nativeAd, adId);
+                            if (!callbackFired[0]) {
+                                callbackFired[0] = true;
+                                adCallback.onNativeAds(nativeAd, adId);
+                            }
                         } else if (!highFloorFilled[0] && !preloadedAds.containsKey(position)) {
-                            // Lower floor filled first, high floor hasn't responded yet — use as fallback
+                            // Lower floor filled first — use as fallback until high floor responds
                             adStatusMap.put(position, AdStatus.LOADED);
                             preloadedAds.put(position, new AdsResponse<>(nativeAd.getNativeAd(), adId));
                             adLoadTimestamps.put(position, System.currentTimeMillis());
-                            adCallback.onNativeAds(nativeAd, adId);
+                            if (!callbackFired[0]) {
+                                callbackFired[0] = true;
+                                adCallback.onNativeAds(nativeAd, adId);
+                            }
                         } else {
                             // Already have a higher-priority ad cached — destroy this one
                             nativeAd.getNativeAd().destroy();
@@ -460,11 +485,11 @@ public class NativeAdManager {
                     synchronized (failCount) {
                         failCount[0]++;
                         if (priority == 0) {
-                            // High floor failed — low floor result (if any) will be used
                             Log.d(TAG, "High floor failed for " + position + ", waiting for fallback");
                         }
-                        if (failCount[0] >= totalIds) {
+                        if (failCount[0] >= totalIds && !callbackFired[0]) {
                             // All floors failed
+                            callbackFired[0] = true;
                             adStatusMap.put(position, AdStatus.FAILED);
                             preloadedAds.remove(position);
                             adCallback.onAdFailedToLoad(error);
@@ -640,7 +665,15 @@ public class NativeAdManager {
             hideAdViews(placeHolder, shimmer);
             return;
         }
-        if (adsResponse != null) {
+        if (adsResponse != null && adsResponse.getAds() != null) {
+            // Check if the ad has expired before showing
+            Long loadTime = adLoadTimestamps.get(adsResponse.getUnitID());
+            if (loadTime != null && (System.currentTimeMillis() - loadTime) > AD_EXPIRY_MS) {
+                Log.d(TAG, "Ad expired at show time, destroying: " + adsResponse.getUnitID());
+                adsResponse.getAds().destroy();
+                hideAdViews(placeHolder, shimmer);
+                return;
+            }
             placeHolder.setVisibility(View.VISIBLE);
             if (shimmer != null) {
                 shimmer.stopShimmer();
@@ -731,6 +764,10 @@ public class NativeAdManager {
     }
 
     private void startGlobalRefreshIfNeeded() {
+        if (!autoRefreshEnabled) {
+            Log.d(TAG, "Auto-refresh disabled via config");
+            return;
+        }
         long interval = getRefreshInterval();
         if (interval < MIN_REFRESH_INTERVAL) {
             Log.d(TAG, "Auto-refresh disabled: interval " + interval + "s < " + MIN_REFRESH_INTERVAL + "s");
@@ -780,15 +817,18 @@ public class NativeAdManager {
                 continue;
             }
 
-            // Swap-on-success: load new ad, show when ready, keep old visible
+            // Swap-on-success with stagger to avoid thundering herd
             AdUnitsConfig config = nativeAdMap.get(placement.position);
             if (config == null || config.adUnitIds.isEmpty()) continue;
 
             String entryKey = entry.getKey();
             int layoutId = placement.layoutId;
             String position = placement.position;
+            long stagger = (long) (Math.random() * AdConstants.REFRESH_STAGGER_MAX_MS);
 
-            AdsMobileAdsManager.getInstance().loadAlternateNative(
+            globalRefreshHandler.postDelayed(() -> {
+                if (activity.isFinishing() || activity.isDestroyed()) return;
+                AdsMobileAdsManager.getInstance().loadAlternateNative(
                     activity, config.adUnitIds,
                     new AdCallback() {
                         @Override
@@ -808,7 +848,8 @@ public class NativeAdManager {
                             Log.d(TAG, "Refresh failed, keeping old: " + entryKey);
                         }
                     }
-            );
+                );
+            }, stagger);
         }
 
         if (autoRefreshPlacements.isEmpty()) {

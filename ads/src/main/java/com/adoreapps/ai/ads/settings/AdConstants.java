@@ -27,6 +27,24 @@ public final class AdConstants {
     /** Default loading dialog timeout before auto-dismiss (milliseconds). */
     public static final long LOADING_DIALOG_TIMEOUT_MS = 15_000L;
 
+    /** Max time to wait for an ad load response before timing out (milliseconds). */
+    public static final long AD_LOAD_TIMEOUT_MS = 10_000L;
+
+    /** Max retry attempts for DefaultAdPool preload failures. */
+    public static final int POOL_MAX_RETRY_ATTEMPTS = 3;
+
+    /** Base retry delay for DefaultAdPool preload (milliseconds). Doubles each attempt: 30s, 60s, 120s. */
+    public static final long POOL_RETRY_BASE_DELAY_MS = 30_000L;
+
+    /** Max ads cached per type in DefaultAdPool. */
+    public static final int POOL_MAX_CACHE_SIZE = 2;
+
+    /** Max stagger delay (ms) between placement refreshes to avoid thundering herd. */
+    public static final long REFRESH_STAGGER_MAX_MS = 5_000L;
+
+    /** SharedPreferences key for interstitial cooldown end timestamp. */
+    public static final String PREF_INTERSTITIAL_COOLDOWN_END = "adore_interstitial_cooldown_end";
+
     // =========================================================
     // TEST AD UNIT IDS (Google-provided sample ads)
     // =========================================================

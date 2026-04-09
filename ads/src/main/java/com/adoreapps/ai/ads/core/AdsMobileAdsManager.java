@@ -23,7 +23,6 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -46,11 +45,8 @@ import com.adoreapps.ai.ads.wrapper.ApAdNative;
 import com.adoreapps.ai.ads.wrapper.ApAdView;
 import com.adoreapps.ai.ads.wrapper.ApInterstitialAd;
 import com.adoreapps.ai.ads.wrapper.ApRewardItem;
-import com.applovin.sdk.AppLovinPrivacySettings;
-import com.bytedance.sdk.openadsdk.api.PAGConstant;
 import com.facebook.ads.AudienceNetworkAds;
 import com.google.ads.mediation.admob.AdMobAdapter;
-import com.google.ads.mediation.pangle.PangleMediationAdapter;
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdLoader;
@@ -92,6 +88,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.WeakHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AdsMobileAdsManager {
     private static AdsMobileAdsManager instance;
@@ -99,6 +96,7 @@ public class AdsMobileAdsManager {
     private boolean isShowLoadingDialog = true;
     private boolean isShowTestAds = false;
     private boolean isUseTestAdIds = false;
+    private boolean facebookEnabled = true;
     private boolean hasLog = true;
 
 
@@ -173,33 +171,26 @@ public class AdsMobileAdsManager {
         ExecutorService serialExecutor = Executors.newSingleThreadExecutor();
 
         serialExecutor.execute(() -> {
-            // Step 1: AppLovin + Vungle (lightweight, consent-only)
+            // Step 1: Vungle
             try {
-                Log.i("AdInit", "Initializing AppLovin + Vungle...");
-                AppLovinPrivacySettings.setHasUserConsent(hasConsent, context);
-                AppLovinPrivacySettings.setDoNotSell(!hasConsent, context);
-
+                Log.i("AdInit", "Initializing Vungle...");
                 VunglePrivacySettings.setGDPRStatus(hasConsent, "v1.0.0");
                 VunglePrivacySettings.setCCPAStatus(hasConsent);
-                Log.i("AdInit", "AppLovin + Vungle ready");
+                Log.i("AdInit", "Vungle ready");
             } catch (Exception e) {
-                Log.e("AdInit", "AppLovin/Vungle init failed: " + e.getMessage());
+                Log.e("AdInit", "Vungle init failed: " + e.getMessage());
             }
 
-            // Step 2: MBridge + Pangle
+            // Step 2: MBridge
+            // AppLovin 13.6+, Pangle 7.9+, and MBridge 17.1+ read consent from
+            // the IAB TCF string written by UMP — no manual consent setters needed.
             try {
-                Log.i("AdInit", "Initializing MBridge + Pangle...");
+                Log.i("AdInit", "Initializing MBridge...");
                 MBridgeSDK mBridgeSDK = MBridgeSDKFactory.getMBridgeSDK();
                 mBridgeSDK.setConsentStatus(context, hasConsent ? MBridgeConstans.IS_SWITCH_ON : MBridgeConstans.IS_SWITCH_OFF);
-                mBridgeSDK.setDoNotTrackStatus(!hasConsent);
-
-                PangleMediationAdapter.setGDPRConsent(
-                        hasConsent ? PAGConstant.PAGGDPRConsentType.PAG_GDPR_CONSENT_TYPE_CONSENT
-                                   : PAGConstant.PAGGDPRConsentType.PAG_GDPR_CONSENT_TYPE_NO_CONSENT
-                );
-                Log.i("AdInit", "MBridge + Pangle ready");
+                Log.i("AdInit", "MBridge ready");
             } catch (Exception e) {
-                Log.e("AdInit", "MBridge/Pangle init failed: " + e.getMessage());
+                Log.e("AdInit", "MBridge init failed: " + e.getMessage());
             }
 
             // Step 3: Unity
@@ -217,16 +208,19 @@ public class AdsMobileAdsManager {
                 Log.e("AdInit", "Unity init failed: " + e.getMessage());
             }
 
-            // Step 4: Meta Audience Network — delayed to reduce class-loading pressure.
-            // Post to main thread after a short delay so it doesn't compete with rendering.
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                try {
-                    AudienceNetworkInitializeHelper.initialize(context);
-                    Log.i("AdInit", "Meta Audience Network initialized");
-                } catch (Exception e) {
-                    Log.e("AdInit", "Meta init failed: " + e.getMessage());
-                }
-            }, 3000);
+            // Step 4: Meta Audience Network — only if Facebook is enabled.
+            if (facebookEnabled) {
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    try {
+                        AudienceNetworkInitializeHelper.initialize(context);
+                        Log.i("AdInit", "Meta Audience Network initialized");
+                    } catch (Exception e) {
+                        Log.e("AdInit", "Meta init failed: " + e.getMessage());
+                    }
+                }, 3000);
+            } else {
+                Log.i("AdInit", "Meta Audience Network skipped (Facebook disabled)");
+            }
         });
 
         serialExecutor.shutdown();
@@ -240,19 +234,13 @@ public class AdsMobileAdsManager {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             try {
-                AppLovinPrivacySettings.setHasUserConsent(hasConsent, context);
-                AppLovinPrivacySettings.setDoNotSell(!hasConsent, context);
+                // AppLovin 13.6+, Pangle 7.9+, MBridge 17.1+ read consent
+                // from the IAB TCF string written by UMP automatically.
                 VunglePrivacySettings.setGDPRStatus(hasConsent, "v1.0.0");
                 VunglePrivacySettings.setCCPAStatus(hasConsent);
 
                 MBridgeSDK mBridgeSDK = MBridgeSDKFactory.getMBridgeSDK();
                 mBridgeSDK.setConsentStatus(context, hasConsent ? MBridgeConstans.IS_SWITCH_ON : MBridgeConstans.IS_SWITCH_OFF);
-                mBridgeSDK.setDoNotTrackStatus(!hasConsent);
-
-                PangleMediationAdapter.setGDPRConsent(
-                        hasConsent ? PAGConstant.PAGGDPRConsentType.PAG_GDPR_CONSENT_TYPE_CONSENT
-                                   : PAGConstant.PAGGDPRConsentType.PAG_GDPR_CONSENT_TYPE_NO_CONSENT
-                );
 
                 MetaData gdprMetaData = new MetaData(context);
                 gdprMetaData.set("gdpr.consent", hasConsent);
@@ -313,6 +301,14 @@ public class AdsMobileAdsManager {
 
     public boolean isAdsEnabled() {
         return adsEnabled;
+    }
+
+    public void setFacebookEnabled(boolean enabled) {
+        this.facebookEnabled = enabled;
+    }
+
+    public boolean isFacebookEnabled() {
+        return facebookEnabled;
     }
 
 
@@ -389,7 +385,45 @@ public class AdsMobileAdsManager {
             if (AppOpenAdManager.getInstance().isInitialized()) {
                 AppOpenAdManager.getInstance().disableAppResume();
             }
-            loadAlternateInter(context, idsInput, callback);
+            final AtomicBoolean responded = new AtomicBoolean(false);
+            Handler timeoutHandler = new Handler(Looper.getMainLooper());
+            timeoutHandler.postDelayed(() -> {
+                if (responded.compareAndSet(false, true)) {
+                    Log.w("AdmobLogger", "loadAlternateInterstitialAds: TIMEOUT");
+                    if (AppOpenAdManager.getInstance().isInitialized()) {
+                        AppOpenAdManager.getInstance().enableAppResume();
+                    }
+                    callback.onAdFailedToLoad(new ApAdError(errAd));
+                    callback.onNextScreen();
+                }
+            }, AdConstants.AD_LOAD_TIMEOUT_MS);
+            loadAlternateInter(context, idsInput, new AdCallback() {
+                @Override
+                public void onResultInterstitialAd(ApInterstitialAd ad) {
+                    if (responded.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacksAndMessages(null);
+                        callback.onResultInterstitialAd(ad);
+                    }
+                }
+                @Override
+                public void onAdFailedToLoad(@NonNull ApAdError error) {
+                    if (responded.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacksAndMessages(null);
+                        callback.onAdFailedToLoad(error);
+                    }
+                }
+                @Override
+                public void onNextScreen() {
+                    if (responded.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacksAndMessages(null);
+                        callback.onNextScreen();
+                    }
+                }
+                @Override
+                public void onAdClicked() { callback.onAdClicked(); }
+                @Override
+                public void onAdImpression() { callback.onAdImpression(); }
+            });
         }
     }
     public void loadAlternateInter(final Context context, List<String> idsInput, final AdCallback callback) {
@@ -730,13 +764,9 @@ public class AdsMobileAdsManager {
 
 
     private AdSize getAdSize(Activity mActivity) {
-        Display display = mActivity.getWindowManager().getDefaultDisplay();
-        DisplayMetrics outMetrics = new DisplayMetrics();
-        display.getMetrics(outMetrics);
-        float widthPixels = (float)outMetrics.widthPixels;
-        float density = outMetrics.density;
-        int adWidth = (int)(widthPixels / density);
-        return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(mActivity, adWidth);
+        DisplayMetrics displayMetrics = mActivity.getResources().getDisplayMetrics();
+        int adWidth = (int) (displayMetrics.widthPixels / displayMetrics.density);
+        return AdSize.getLargeAnchoredAdaptiveBannerAdSize(mActivity, adWidth);
     }
 
     public void loadAlternateNative(final Context context, List<String> idsInput, final AdCallback callback) {
@@ -748,62 +778,69 @@ public class AdsMobileAdsManager {
         if (ids.isEmpty()) {
             callback.onAdFailedToLoad(new ApAdError(this.errAd));
             Log.d("AdmobLogger", "loadAlternateNative: empty");
+            return;
+        }
 
-        } else {
-            String nativeAdId = (String)ids.get(0);
-            if(isUseTestAdIds()) {
-                nativeAdId = AdConstants.TEST_NATIVE_AD_ID;
+        final AtomicBoolean responded = new AtomicBoolean(false);
+        Handler timeoutHandler = new Handler(Looper.getMainLooper());
+        timeoutHandler.postDelayed(() -> {
+            if (responded.compareAndSet(false, true)) {
+                Log.w("AdmobLogger", "loadAlternateNative: TIMEOUT");
+                callback.onAdFailedToLoad(new ApAdError(errAd));
             }
-            String finalNativeAdId = nativeAdId;
-            FirebaseAnalyticsEvents.getInstance().logAdEvent(
-                    "ad_request",
-                    AdType.NATIVE.name(),
-                    finalNativeAdId
-            );
-            this.loadUnifiedNativeAd(context, nativeAdId, new AdCallback() {
-                public void onAdFailedToLoad(@NonNull ApAdError i) {
-                    super.onAdFailedToLoad(i);
-                    ids.remove(0);
-                    if (ids.isEmpty()) {
+        }, AdConstants.AD_LOAD_TIMEOUT_MS);
+
+        loadAlternateNativeInternal(context, new ArrayList<>(ids), responded, timeoutHandler, callback);
+    }
+
+    private void loadAlternateNativeInternal(final Context context, List<String> ids,
+                                              AtomicBoolean responded, Handler timeoutHandler,
+                                              final AdCallback callback) {
+        String nativeAdId = ids.get(0);
+        if (isUseTestAdIds()) {
+            nativeAdId = AdConstants.TEST_NATIVE_AD_ID;
+        }
+        String finalNativeAdId = nativeAdId;
+        FirebaseAnalyticsEvents.getInstance().logAdEvent("ad_request", AdType.NATIVE.name(), finalNativeAdId);
+
+        this.loadUnifiedNativeAd(context, nativeAdId, new AdCallback() {
+            public void onAdFailedToLoad(@NonNull ApAdError i) {
+                super.onAdFailedToLoad(i);
+                ids.remove(0);
+                if (ids.isEmpty()) {
+                    if (responded.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacksAndMessages(null);
                         callback.onAdFailedToLoad(i);
-                    } else {
-                        loadAlternateNative(context, ids, callback);
                     }
-
+                } else {
+                    loadAlternateNativeInternal(context, ids, responded, timeoutHandler, callback);
                 }
+            }
 
-                public void onNativeAds(ApAdNative nativeAd) {
-                    super.onNativeAds(nativeAd);
+            public void onNativeAds(ApAdNative nativeAd) {
+                super.onNativeAds(nativeAd);
+                if (responded.compareAndSet(false, true)) {
+                    timeoutHandler.removeCallbacksAndMessages(null);
                     callback.onNativeAds(nativeAd, finalNativeAdId);
                     Log.i("AdmobLogger", "loadAlternateNative: success-" + finalNativeAdId);
+                } else {
+                    nativeAd.getNativeAd().destroy();
                 }
+            }
 
-                public void onAdClicked() {
-                    super.onAdClicked();
-                    if (callback != null) {
-                        callback.onAdClicked();
-                    }
-                    FirebaseAnalyticsEvents.getInstance().logClickAdsEvent(
-                            context,
-                            finalNativeAdId
-                    );
-                }
+            public void onAdClicked() {
+                super.onAdClicked();
+                if (callback != null) callback.onAdClicked();
+                FirebaseAnalyticsEvents.getInstance().logClickAdsEvent(context, finalNativeAdId);
+            }
 
-                public void onAdImpression() {
-                    super.onAdImpression();
-                    FirebaseAnalyticsEvents.getInstance().logAdImpressionValue(
-                            context,
-                            finalNativeAdId,
-                            AD_PLATFORM_ADMOB,
-                            AdType.NATIVE
-                    );
-                    if (callback != null) {
-                        callback.onAdImpression();
-                    }
-
-                }
-            });
-        }
+            public void onAdImpression() {
+                super.onAdImpression();
+                FirebaseAnalyticsEvents.getInstance().logAdImpressionValue(
+                        context, finalNativeAdId, AD_PLATFORM_ADMOB, AdType.NATIVE);
+                if (callback != null) callback.onAdImpression();
+            }
+        });
     }
 
 
@@ -1050,11 +1087,38 @@ public class AdsMobileAdsManager {
         adView.setNativeAd(nativeAd);
     }
 
-    public void initLoadAlternateRewardAd(Context context, List<String > idsInput, final RewardedAdLoadCallback adLoadCallback) {
+    public void initLoadAlternateRewardAd(Context context, List<String> idsInput, final RewardedAdLoadCallback adLoadCallback) {
         if (AppOpenAdManager.getInstance().isInitialized()) {
             AppOpenAdManager.getInstance().disableAppResume();
         }
-        loadAlternateRewardAd(context, idsInput, adLoadCallback);
+        final AtomicBoolean responded = new AtomicBoolean(false);
+        Handler timeoutHandler = new Handler(Looper.getMainLooper());
+        timeoutHandler.postDelayed(() -> {
+            if (responded.compareAndSet(false, true)) {
+                Log.w("AdmobLogger", "initLoadAlternateRewardAd: TIMEOUT");
+                if (AppOpenAdManager.getInstance().isInitialized()) {
+                    AppOpenAdManager.getInstance().enableAppResume();
+                }
+                adLoadCallback.onAdFailedToLoad(errAd);
+            }
+        }, AdConstants.AD_LOAD_TIMEOUT_MS);
+
+        loadAlternateRewardAd(context, idsInput, new RewardedAdLoadCallback() {
+            @Override
+            public void onAdLoaded(@NonNull RewardedAd rewardedAd) {
+                if (responded.compareAndSet(false, true)) {
+                    timeoutHandler.removeCallbacksAndMessages(null);
+                    adLoadCallback.onAdLoaded(rewardedAd);
+                }
+            }
+            @Override
+            public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                if (responded.compareAndSet(false, true)) {
+                    timeoutHandler.removeCallbacksAndMessages(null);
+                    adLoadCallback.onAdFailedToLoad(loadAdError);
+                }
+            }
+        });
     }
 
         public void loadAlternateRewardAd(Context context, List<String > idsInput, final RewardedAdLoadCallback adLoadCallback) {
@@ -1227,8 +1291,16 @@ public class AdsMobileAdsManager {
             if (AppOpenAdManager.getInstance().isInitialized()) {
                 AppOpenAdManager.getInstance().enableAppResume();
             }
-            activity.sendBroadcast(new Intent("action_dismiss_dialog"));
-            callback.onAdFailedToShowFullScreenContent(new ApAdError(this.errAd));
+            if (activity != null && !activity.isFinishing() && !activity.isDestroyed()) {
+                activity.sendBroadcast(new Intent("action_dismiss_dialog"));
+            }
+            if (callback != null) {
+                callback.onAdFailedToShowFullScreenContent(new ApAdError(this.errAd));
+                callback.onAdClosed();
+            }
+            FirebaseAnalyticsEvents.getInstance().logAdShowFailed(
+                    activity, rewardedAd != null ? rewardedAd.getAdUnitId() : "unknown",
+                    AdType.REWARDED, "precondition_failed");
         }
     }
 

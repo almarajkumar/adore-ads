@@ -252,7 +252,7 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
                     this.appResumeAd.setFullScreenContentCallback(fullScreenContentCallback);
                 }
 
-                (new Handler()).postDelayed(() -> {
+                (new Handler(android.os.Looper.getMainLooper())).postDelayed(() -> {
                     if (!AdsMobileAdsManager.getInstance().isShowLoadingDialog() || this.dialog != null && this.dialog.isShowing()) {
                         AdsMobileAdsManager.getInstance().log("Show OpenAd :" + this.openAppID);
                         this.appResumeAd.setOnPaidEventListener(new OnPaidEventListener() {
@@ -288,7 +288,7 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
         if (!this.isAppResumeEnabled) {
             Log.d("AppOpenManager", "onResume: app resume is disabled");
         } else {
-            (new Handler()).postDelayed(new Runnable() {
+            (new Handler(android.os.Looper.getMainLooper())).postDelayed(new Runnable() {
                 public void run() {
                     if (AppOpenAdManager.this.currentActivity == null) {
                         return;

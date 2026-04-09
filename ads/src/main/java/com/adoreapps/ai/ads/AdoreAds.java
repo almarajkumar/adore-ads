@@ -7,11 +7,17 @@ import com.adoreapps.ai.ads.billing.PurchaseManager;
 import com.adoreapps.ai.ads.consent.ConsentManager;
 import com.adoreapps.ai.ads.core.AdsMobileAdsManager;
 import com.adoreapps.ai.ads.core.AppOpenAdManager;
+import com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents;
 import com.adoreapps.ai.ads.manager.BannerAdManager;
 import com.adoreapps.ai.ads.manager.DefaultAdPool;
 import com.adoreapps.ai.ads.manager.InterstitialAdManager;
 import com.adoreapps.ai.ads.manager.NativeAdManager;
 import com.adoreapps.ai.ads.manager.RewardAdManager;
+import com.adoreapps.ai.ads.model.RemoteAdUnit;
+import com.adoreapps.ai.ads.utils.RemoteConfigManager;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Main entry point for the Adore Ads library.
@@ -79,9 +85,13 @@ public final class AdoreAds {
         coreManager.setUseTestAdIds(config.isUseTestAdIds());
         coreManager.setAdsEnabled(config.isAdsEnabled());
         coreManager.setShowLoadingDialog(config.isShowLoadingDialog());
+        coreManager.setFacebookEnabled(config.isFacebookEnabled());
         coreManager.init(application, () -> {
             Log.i(TAG, "AdMob SDK initialized");
         });
+
+        // Configure Facebook event logging
+        FirebaseAnalyticsEvents.getInstance().setFacebookEnabled(config.isFacebookEnabled());
 
         // Configure consent test device hash if provided
         if (!config.getConsentTestDeviceHashedId().isEmpty()) {
@@ -95,10 +105,16 @@ public final class AdoreAds {
 
         // Initialize all managers with placements from config
         NativeAdManager.getInstance().populateFromConfig(config);
+        NativeAdManager.getInstance().setAutoRefreshEnabled(config.isNativeAutoRefreshEnabled());
         BannerAdManager.getInstance().populateFromConfig(config);
         InterstitialAdManager.getInstance().populateFromConfig(config);
         InterstitialAdManager.getInstance().setCooldownSeconds(config.getInterstitialCooldownSeconds());
         RewardAdManager.getInstance().populateFromConfig(config);
+
+        // Auto-fetch remote config if enabled
+        if (config.isRemoteConfigEnabled()) {
+            ads.fetchRemoteConfig(null);
+        }
     }
 
     /**
@@ -115,6 +131,114 @@ public final class AdoreAds {
         InterstitialAdManager.getInstance().setCooldownSeconds(newConfig.getInterstitialCooldownSeconds());
         RewardAdManager.getInstance().populateFromConfig(newConfig);
         Log.i(TAG, "Config updated dynamically");
+    }
+
+    // =========================================================
+    // REMOTE CONFIG
+    // =========================================================
+
+    /**
+     * Fetch Firebase Remote Config, apply ad-related keys, then invoke callback.
+     * The library automatically reads keys prefixed with "adore_" and applies them
+     * to the active managers.
+     *
+     * @param listener Called when fetch completes (success or failure).
+     *                 On failure, cached/default values are still applied.
+     */
+    public void fetchRemoteConfig(RemoteConfigManager.OnRemoteConfigReadyListener listener) {
+        RemoteConfigManager rcm = RemoteConfigManager.getInstance();
+        if (config != null && config.getRemoteConfigDefaultsResId() != 0) {
+            rcm.setDefaultsResourceId(config.getRemoteConfigDefaultsResId());
+        }
+        rcm.init(success -> {
+            applyRemoteConfig();
+            if (listener != null) listener.onReady(success);
+        });
+    }
+
+    /**
+     * Apply currently activated remote config values to all ad managers.
+     * Called automatically after fetchRemoteConfig(), but can also be called
+     * manually if the app activates remote config on its own.
+     */
+    public void applyRemoteConfig() {
+        RemoteConfigManager rcm = RemoteConfigManager.getInstance();
+
+        // --- Global toggles ---
+        boolean adsEnabled = rcm.getBoolean("adore_ads_enabled", config != null && config.isAdsEnabled());
+        AdsMobileAdsManager.getInstance().setAdsEnabled(adsEnabled);
+
+        long cooldown = rcm.getLong("adore_interstitial_cooldown",
+                config != null ? config.getInterstitialCooldownSeconds() : 30);
+        InterstitialAdManager.getInstance().setCooldownSeconds(cooldown);
+
+        long refreshInterval = rcm.getLong("adore_native_refresh_interval",
+                config != null ? config.getNativeRefreshIntervalSeconds() : 20);
+        // Store for NativeAdManager to pick up via AdSettingsStore
+        if (application != null) {
+            com.adoreapps.ai.ads.settings.AdSettingsStore.getInstance(application)
+                    .setLong("native_refresh_interval", refreshInterval);
+        }
+
+        boolean autoRefresh = rcm.getBoolean("adore_native_auto_refresh_enabled",
+                config != null && config.isNativeAutoRefreshEnabled());
+        NativeAdManager.getInstance().setAutoRefreshEnabled(autoRefresh);
+
+        // --- Per-placement overrides ---
+        applyPlacementOverrides("native", config != null ? config.getNativePlacements() : null);
+        applyPlacementOverrides("inter", config != null ? config.getInterstitialPlacements() : null);
+        applyPlacementOverrides("reward", config != null ? config.getRewardPlacements() : null);
+        applyPlacementOverrides("banner", config != null ? config.getBannerPlacements() : null);
+
+        // Re-push updated placements to managers
+        if (config != null) {
+            NativeAdManager.getInstance().populateFromConfig(config);
+            BannerAdManager.getInstance().populateFromConfig(config);
+            InterstitialAdManager.getInstance().populateFromConfig(config);
+            RewardAdManager.getInstance().populateFromConfig(config);
+        }
+
+        Log.i(TAG, "Remote config applied | adsEnabled=" + adsEnabled
+                + " | cooldown=" + cooldown + "s | refresh=" + refreshInterval + "s"
+                + " | autoRefresh=" + autoRefresh);
+    }
+
+    /**
+     * Apply remote config overrides to a set of placements.
+     * For each placement key, checks for:
+     *   - adore_{type}_{KEY}_enabled → boolean toggle
+     *   - adore_{type}_{KEY}_ads → JSON array of RemoteAdUnit
+     */
+    private void applyPlacementOverrides(String type, Map<String, PlacementConfig> placements) {
+        if (placements == null) return;
+        RemoteConfigManager rcm = RemoteConfigManager.getInstance();
+
+        for (Map.Entry<String, PlacementConfig> entry : placements.entrySet()) {
+            String key = entry.getKey();
+            PlacementConfig pc = entry.getValue();
+
+            // Enable/disable toggle
+            String enabledKey = "adore_" + type + "_" + key + "_enabled";
+            boolean enabled = rcm.getBoolean(enabledKey, pc.isEnabled());
+            pc.setEnabled(enabled);
+
+            // Ad unit ID override (JSON array)
+            String adsKey = "adore_" + type + "_" + key + "_ads";
+            String json = rcm.getJson(adsKey);
+            if (json != null && !json.trim().isEmpty()) {
+                List<String> remoteIds = RemoteAdUnit.toSortedAdIds(json);
+                if (!remoteIds.isEmpty()) {
+                    pc.setAdUnitIds(remoteIds);
+                }
+            }
+        }
+    }
+
+    /**
+     * Access RemoteConfigManager for reading app-specific (non-ad) remote config values.
+     */
+    public RemoteConfigManager remoteConfig() {
+        return RemoteConfigManager.getInstance();
     }
 
     // =========================================================
