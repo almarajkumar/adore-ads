@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="loading_ad">Loading Ads…</string>
+    <string name="loading_ads">Loading Ads…</string>
+    <string name="streamyard_is_a_live_studio">StreamYard is a live studio...</string>
+    <string name="sponsored">Sponsored</string>
+    <string name="an_ad_for_facebook_an_ad_for_facebook">An ad for Facebook An ad for Facebook</string>
+    <string name="ad">Ad</string>
+    <string name="welcome_back">Welcome Back</string>
+</resources>

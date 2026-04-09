@@ -1,0 +1,218 @@
+[
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_tooltip_enter.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_tooltip_enter.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_checkbox_to_unchecked_check_path_merged_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_checkbox_to_unchecked_check_path_merged_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/tt_dislike_animation_show.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-pag-sdk-ad-unfat-7859-20260119210703-release-3:/anim/tt_dislike_animation_show.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_slide_in_top.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_slide_in_top.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/m3_side_sheet_exit_to_left.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/m3_side_sheet_exit_to_left.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_radio_to_off_mtrl_dot_group_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_radio_to_off_mtrl_dot_group_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_radio_to_on_mtrl_dot_group_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_radio_to_on_mtrl_dot_group_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/linear_indeterminate_line2_tail_interpolator.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/linear_indeterminate_line2_tail_interpolator.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/applovin_slide_down_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/anim/applovin_slide_down_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/linear_indeterminate_line2_head_interpolator.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/linear_indeterminate_line2_head_interpolator.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/mtrl_bottom_sheet_slide_in.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/mtrl_bottom_sheet_slide_in.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_checkbox_to_checked_box_outer_merged_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_checkbox_to_checked_box_outer_merged_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/mbridge_reward_activity_stay.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-mbridge_android_sdk-17.0.61-26:/anim/mbridge_reward_activity_stay.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_radio_to_off_mtrl_ring_outer_path_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_radio_to_off_mtrl_ring_outer_path_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/mtrl_bottom_sheet_slide_out.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/mtrl_bottom_sheet_slide_out.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/mbridge_reward_activity_open.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-mbridge_android_sdk-17.0.61-26:/anim/mbridge_reward_activity_open.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/design_snackbar_in.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/design_snackbar_in.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/design_snackbar_out.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/design_snackbar_out.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_slide_out_top.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_slide_out_top.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_popup_enter.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_popup_enter.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/tt_text_animation_y_in.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-pag-sdk-ad-unfat-7859-20260119210703-release-3:/anim/tt_text_animation_y_in.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_checkbox_to_checked_icon_null_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_checkbox_to_checked_icon_null_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/m3_side_sheet_enter_from_right.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/m3_side_sheet_enter_from_right.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/tt_loading_two_icon_scale.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-pag-sdk-ad-unfat-7859-20260119210703-release-3:/anim/tt_loading_two_icon_scale.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/linear_indeterminate_line1_head_interpolator.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/linear_indeterminate_line1_head_interpolator.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/applovin_slide_up_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/anim/applovin_slide_up_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_checkbox_to_checked_box_inner_merged_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_checkbox_to_checked_box_inner_merged_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_popup_exit.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_popup_exit.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/mtrl_card_lowers_interpolator.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/mtrl_card_lowers_interpolator.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_slide_in_bottom.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_slide_in_bottom.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_radio_to_off_mtrl_ring_outer_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_radio_to_off_mtrl_ring_outer_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/design_bottom_sheet_slide_out.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/design_bottom_sheet_slide_out.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_shrink_fade_out_from_bottom.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_shrink_fade_out_from_bottom.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_fade_out.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_fade_out.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/m3_motion_fade_exit.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/m3_motion_fade_exit.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_slide_out_bottom.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_slide_out_bottom.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/tt_fade_out.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-pag-sdk-ad-unfat-7859-20260119210703-release-3:/anim/tt_fade_out.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_fade_in.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_fade_in.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_checkbox_to_unchecked_box_inner_merged_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_checkbox_to_unchecked_box_inner_merged_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_radio_to_on_mtrl_ring_outer_path_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_radio_to_on_mtrl_ring_outer_path_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/m3_bottom_sheet_slide_in.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/m3_bottom_sheet_slide_in.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_grow_fade_in_from_bottom.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_grow_fade_in_from_bottom.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/m3_bottom_sheet_slide_out.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/m3_bottom_sheet_slide_out.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_radio_to_on_mtrl_ring_outer_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_radio_to_on_mtrl_ring_outer_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/design_bottom_sheet_slide_in.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/design_bottom_sheet_slide_in.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/tt_text_animation_x_in.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-pag-sdk-ad-unfat-7859-20260119210703-release-3:/anim/tt_text_animation_x_in.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/btn_checkbox_to_unchecked_icon_null_animation.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/btn_checkbox_to_unchecked_icon_null_animation.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/tt_dislike_animation_dismiss.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-pag-sdk-ad-unfat-7859-20260119210703-release-3:/anim/tt_dislike_animation_dismiss.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/tt_text_animation_y_out.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-jetified-pag-sdk-ad-unfat-7859-20260119210703-release-3:/anim/tt_text_animation_y_out.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/m3_motion_fade_enter.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/m3_motion_fade_enter.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/abc_tooltip_exit.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-appcompat-1.7.1-29:/anim/abc_tooltip_exit.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/linear_indeterminate_line1_tail_interpolator.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/linear_indeterminate_line1_tail_interpolator.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/m3_side_sheet_exit_to_right.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/m3_side_sheet_exit_to_right.xml"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/anim/m3_side_sheet_enter_from_left.xml",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-material-1.13.0-57:/anim/m3_side_sheet_enter_from_left.xml"
+    }
+]

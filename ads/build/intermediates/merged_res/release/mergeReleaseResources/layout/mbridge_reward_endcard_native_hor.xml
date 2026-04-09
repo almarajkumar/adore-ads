@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/mbridge_reward_endcard_hor_bg">
+
+    <RelativeLayout
+        android:id="@+id/mbridge_native_ec_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <View
+            android:id="@+id/mbridge_center_view"
+            android:layout_width="1dp"
+            android:layout_height="1dp"
+            android:layout_centerInParent="true" />
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@id/mbridge_center_view">
+
+            <ImageView
+                android:id="@+id/mbridge_iv_adbanner_bg"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitXY" />
+
+            <com.mbridge.msdk.videocommon.view.RoundImageView
+                android:id="@+id/mbridge_iv_adbanner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:layout_margin="20dp" />
+
+            <ImageView
+                android:id="@+id/mbridge_iv_flag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentBottom="true"
+                android:src="@drawable/mbridge_reward_flag_en" />
+        </RelativeLayout>
+
+        <ImageView
+            android:id="@+id/mbridge_iv_iconbg"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_centerInParent="true"
+            android:background="@drawable/mbridge_reward_end_shape_oval" />
+
+        <ImageView
+            android:id="@+id/mbridge_iv_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_centerInParent="true" />
+
+        <TextView
+            android:id="@+id/mbridge_tv_apptitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/mbridge_iv_iconbg"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="13dp"
+            android:ellipsize="end"
+            android:maxEms="7"
+            android:singleLine="true"
+            android:textColor="@color/mbridge_reward_title_textcolor"
+            android:textSize="15sp" />
+
+        <com.mbridge.msdk.videocommon.view.StarLevelView
+            android:id="@+id/mbridge_sv_starlevel"
+            android:layout_width="wrap_content"
+            android:layout_height="20dp"
+            android:layout_below="@id/mbridge_tv_apptitle"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal" />
+
+        <LinearLayout
+            android:id="@+id/mbridge_tv_number_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/mbridge_sv_starlevel"
+            android:layout_centerHorizontal="true"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="center_vertical"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:text="("
+                android:textColor="@color/mbridge_reward_desc_textcolor"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/mbridge_tv_number"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="center_vertical"
+                android:drawableLeft="@drawable/mbridge_reward_user"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textColor="@color/mbridge_reward_desc_textcolor"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/mbridge_tv_appdesc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/mbridge_tv_number_layout"
+            android:layout_centerHorizontal="true"
+            android:layout_marginLeft="30dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginRight="30dp"
+            android:ellipsize="end"
+            android:lineSpacingMultiplier="1.2"
+            android:minLines="3"
+            android:textColor="@color/mbridge_reward_desc_textcolor"
+            android:textSize="12sp" />
+
+        <ImageView
+            android:id="@+id/mbridge_iv_logo"
+            android:layout_width="54dp"
+            android:layout_height="10dp"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="50dp"
+            android:scaleType="fitXY"
+            android:src="@drawable/mbridge_reward_end_pager_logo" />
+
+        <TextView
+            android:id="@+id/mbridge_tv_cta"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_above="@id/mbridge_iv_logo"
+            android:layout_marginLeft="24dp"
+            android:layout_marginRight="24dp"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/mbridge_reward_shape_end_pager"
+            android:gravity="center"
+            android:text="Install Now"
+            android:textColor="@android:color/white"
+            android:textSize="24sp" />
+
+        <RelativeLayout
+            android:id="@+id/mbridge_native_ec_controller"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="9dp"
+            android:gravity="center">
+
+            <ImageView
+                android:id="@+id/mbridge_iv_link"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentLeft="true"
+                android:contentDescription="noteLinkButton"
+                android:src="@drawable/mbridge_reward_notice" />
+
+            <com.mbridge.msdk.widget.FeedBackButton
+                android:id="@+id/mbridge_native_endcard_feed_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="27dp"
+                android:layout_marginStart="9dp"
+                android:layout_marginLeft="9dp"
+                android:layout_toRightOf="@+id/mbridge_iv_link"
+                android:layout_alignTop="@+id/mbridge_iv_link"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:text="@string/mbridge_cm_feedback_btn_text"
+                android:visibility="gone" />
+
+            <ImageView
+                android:id="@+id/mbridge_iv_close"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:contentDescription="closeButton"
+                android:src="@drawable/mbridge_reward_close_ec" />
+
+        </RelativeLayout>
+
+
+    </RelativeLayout>
+
+</RelativeLayout>

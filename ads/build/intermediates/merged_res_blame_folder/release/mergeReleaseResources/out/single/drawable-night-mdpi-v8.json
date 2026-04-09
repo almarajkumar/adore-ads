@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-night-mdpi-v8/applovin_ic_warning_outline.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-night-mdpi-v8/applovin_ic_warning_outline.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-night-mdpi-v8/applovin_ic_baseline_add_circle_outline.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-night-mdpi-v8/applovin_ic_baseline_add_circle_outline.png"
+    }
+]

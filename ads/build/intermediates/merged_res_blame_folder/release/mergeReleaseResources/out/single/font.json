@@ -1,0 +1,54 @@
+[
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/font_med.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/font_med.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/roboto_medium.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/roboto_medium.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/title_font.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/title_font.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/roboto_light.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/roboto_light.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/font.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/font.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/font_reg.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/font_reg.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/font_bold.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/font_bold.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/san_bold.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/san_bold.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/roboto_regular.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/roboto_regular.ttf"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/font/poppins_regular.ttf",
+        "source": "com.adoreapps.ai.ads-main-73:/font/poppins_regular.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/font_semibold.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/font_semibold.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/font_lite.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/font_lite.ttf"
+    },
+    {
+        "merged": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-release-72:/font/roboto_bold.ttf",
+        "source": "/Users/rajkumaralma/.gradle/daemon/8.9/com.adoreapps.ai.ads-main-73:/font/roboto_bold.ttf"
+    }
+]

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mbridge_choice_frl"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="center"
+    android:gravity="center">
+
+    <ImageView
+        android:id="@+id/mbridge_lv_iv_bg"
+        android:layout_width="match_parent"
+        android:background="@drawable/mbridge_order_layout_list_bg"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop" />
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center">
+
+            <com.mbridge.msdk.video.dynview.ordercamp.AblGridView
+                android:id="@+id/mbridge_order_view_h_lv"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:numColumns="auto_fit"
+                android:scrollbars="none"
+                android:stretchMode="spacingWidthUniform" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <RelativeLayout
+        android:id="@+id/mbridge_native_order_camp_controller"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="10dp"
+        android:layout_marginLeft="10dp"
+        >
+        <com.mbridge.msdk.dycreator.baseview.cusview.MBridgeDyImageView
+            android:id="@+id/mbridge_iv_link"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:src="@drawable/mbridge_reward_notice"
+            android:layout_centerVertical="true"
+            />
+
+        <com.mbridge.msdk.widget.FeedBackButton
+            android:id="@+id/mbridge_native_order_camp_feed_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="25dp"
+            android:layout_toEndOf="@+id/mbridge_iv_link"
+            android:layout_alignTop="@+id/mbridge_iv_link"
+            android:gravity="center"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:textSize="11sp"
+            android:textColor="@color/mbridge_white"
+            android:text="@string/mbridge_cm_feedback_btn_text"
+            android:visibility="gone"
+            />
+
+        <com.mbridge.msdk.dycreator.baseview.cusview.MBridgeDyImageView
+            android:id="@+id/mbridge_order_view_iv_close"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_alignParentRight="true"
+            android:contentDescription="closeButton"
+            android:src="@drawable/mbridge_reward_close" />
+
+        <com.mbridge.msdk.dycreator.baseview.cusview.MBridgeTextView
+            android:id="@+id/mbridge_tv_reward_status"
+            android:layout_width="wrap_content"
+            android:layout_height="25dp"
+            android:layout_marginLeft="5dp"
+            android:layout_toEndOf="@+id/mbridge_native_order_camp_feed_btn"
+            android:layout_alignTop="@+id/mbridge_iv_link"
+            android:background="@drawable/mbridge_reward_video_time_count_num_bg"
+            android:gravity="center"
+            android:paddingStart="10dp"
+            android:paddingLeft="10dp"
+            android:paddingEnd="10dp"
+            android:paddingRight="10dp"
+            android:text="@string/mbridge_reward_video_view_reward_time_complete"
+            android:textColor="@color/mbridge_reward_white"
+            android:textSize="12sp"
+            android:visibility="invisible"
+            />
+    </RelativeLayout>
+
+    <ImageView
+        android:id="@+id/mbridge_iv_logo"
+        android:layout_width="50dp"
+        android:layout_height="18dp"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="13dp"
+        android:layout_marginLeft="13dp"
+        android:layout_marginTop="13dp"
+        android:layout_marginEnd="13dp"
+        android:layout_marginRight="13dp"
+        android:layout_marginBottom="5dp"
+        android:src="@drawable/mbridge_reward_end_pager_logo" />
+
+</RelativeLayout>

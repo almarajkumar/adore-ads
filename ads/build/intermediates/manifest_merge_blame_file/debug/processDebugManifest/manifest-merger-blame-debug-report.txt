@@ -1,0 +1,29 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.adoreapps.ai.ads" >
+4
+5    <uses-sdk android:minSdkVersion="24" />
+6
+7    <uses-permission android:name="android.permission.INTERNET" />
+7-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:4:5-67
+7-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:4:22-64
+8    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+8-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:5:5-79
+8-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:5:22-76
+9    <uses-permission android:name="android.permission.WAKE_LOCK" />
+9-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:6:5-68
+9-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:6:22-65
+10
+11    <application>
+11-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:8:5-13:19
+12        <activity
+12-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:9:9-12:40
+13            android:name="com.facebook.ads.AudienceNetworkActivity"
+13-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:10:13-68
+14            android:exported="false"
+14-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:12:13-37
+15            android:hardwareAccelerated="true" />
+15-->/Users/rajkumaralma/Desktop/APPS/adore-ads/ads/src/main/AndroidManifest.xml:11:13-47
+16    </application>
+17
+18</manifest>

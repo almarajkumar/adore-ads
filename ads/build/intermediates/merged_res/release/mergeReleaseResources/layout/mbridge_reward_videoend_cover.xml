@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/mbridge_color_cc000000">
+
+    <ImageView
+        android:id="@+id/mbridge_vec_iv_close"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_gravity="right"
+        android:layout_margin="10dp"
+        android:src="@drawable/mbridge_reward_close_ec"/>
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center">
+
+        <ImageView
+            android:id="@+id/mbridge_vec_iv_icon"
+            android:layout_width="65dp"
+            android:layout_height="65dp"
+            android:layout_centerHorizontal="true" />
+
+        <TextView
+            android:id="@+id/mbridge_vec_tv_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="12dp"
+            android:layout_marginLeft="54dp"
+            android:layout_marginRight="54dp"
+            android:textColor="@color/mbridge_white"
+            android:textSize="18sp"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:layout_below="@id/mbridge_vec_iv_icon"/>
+
+        <TextView
+            android:id="@+id/mbridge_vec_tv_desc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:textSize="14sp"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:layout_marginLeft="54dp"
+            android:layout_marginRight="54dp"
+            android:textColor="@color/mbridge_color_999999"
+            android:layout_below="@id/mbridge_vec_tv_title"
+            android:singleLine="true" />
+
+        <TextView
+            android:id="@+id/mbridge_vec_btn"
+            android:layout_width="200dp"
+            android:layout_height="36dp"
+            android:layout_margin="28dp"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:textColor="@color/mbridge_white"
+            android:layout_below="@id/mbridge_vec_tv_desc"
+            android:layout_centerHorizontal="true"
+            android:background="@drawable/mbridge_reward_shape_videoend_buttonbg"/>
+
+    </RelativeLayout>
+
+</FrameLayout>

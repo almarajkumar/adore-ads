@@ -1,0 +1,174 @@
+[
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_adjoe.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_adjoe.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_check_mark_bordered.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_check_mark_bordered.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/ic_call_decline.png",
+        "source": "com.adoreapps.ai.ads-core-1.13.0-50:/drawable-ldpi-v4/ic_call_decline.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_chartboost.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_chartboost.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_moloco.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_moloco.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_pangle.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_pangle.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_line.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_line.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_admob.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_admob.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_yso.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_yso.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_smaato.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_smaato.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/ic_call_answer_video.png",
+        "source": "com.adoreapps.ai.ads-core-1.13.0-50:/drawable-ldpi-v4/ic_call_answer_video.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_x_mark.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_x_mark.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_bigo.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_bigo.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_play_icon.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_play_icon.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_ogury_presage.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_ogury_presage.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_disclosure_arrow.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_disclosure_arrow.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_warning_outline.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_warning_outline.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_amazon_marketplace.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_amazon_marketplace.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_vungle.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_vungle.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_ironsource.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_ironsource.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_mytarget.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_mytarget.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_warning.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_warning.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_tiktok.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_tiktok.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_inmobi.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_inmobi.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_google_ad_manager.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_google_ad_manager.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_unity.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_unity.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_bidmachine.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_bidmachine.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/ic_call_answer_video_low.png",
+        "source": "com.adoreapps.ai.ads-core-1.13.0-50:/drawable-ldpi-v4/ic_call_answer_video_low.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_facebook.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_facebook.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_verve.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_verve.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_baseline_add_circle_outline.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_baseline_add_circle_outline.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_pause_icon.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_pause_icon.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_mintegral.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_mintegral.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_mobilefuse.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_mobilefuse.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_check_mark_borderless.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_check_mark_borderless.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_yandex.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_yandex.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_applovin.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_applovin.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/ic_call_answer.png",
+        "source": "com.adoreapps.ai.ads-core-1.13.0-50:/drawable-ldpi-v4/ic_call_answer.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_fyber.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_fyber.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_mediation_pubmatic.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_mediation_pubmatic.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/ic_call_decline_low.png",
+        "source": "com.adoreapps.ai.ads-core-1.13.0-50:/drawable-ldpi-v4/ic_call_decline_low.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/ic_call_answer_low.png",
+        "source": "com.adoreapps.ai.ads-core-1.13.0-50:/drawable-ldpi-v4/ic_call_answer_low.png"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/drawable-ldpi-v4/applovin_ic_replay_icon.png",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/drawable-ldpi-v4/applovin_ic_replay_icon.png"
+    }
+]

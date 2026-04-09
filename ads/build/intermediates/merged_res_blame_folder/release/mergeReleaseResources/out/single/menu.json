@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/menu/mediation_debugger_activity_menu.xml",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/menu/mediation_debugger_activity_menu.xml"
+    },
+    {
+        "merged": "com.adoreapps.ai.ads-release-72:/menu/creative_debugger_displayed_ad_activity_menu.xml",
+        "source": "com.adoreapps.ai.ads-jetified-applovin-sdk-13.5.1-13:/menu/creative_debugger_displayed_ad_activity_menu.xml"
+    }
+]

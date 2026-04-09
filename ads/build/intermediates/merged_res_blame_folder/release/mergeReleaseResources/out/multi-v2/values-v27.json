@@ -1,0 +1,36 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.adoreapps.ai.ads-release-72:/values-v27/values-v27.xml",
+            "map": [
+                {
+                    "source": "/Users/rajkumaralma/.gradle/caches/8.9/transforms/5a8b2a252d833fae3f92f39e56b506ac/transformed/jetified-mbridge_android_sdk-17.0.61/res/values-v27/values-v27.xml",
+                    "from": {
+                        "startLines": "2,3",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,158",
+                        "endLines": "2,4",
+                        "endColumns": "102,12",
+                        "endOffsets": "153,266"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "com.adoreapps.ai.ads-mergeReleaseResources-70:/values-v27/values-v27.xml",
+            "map": [
+                {
+                    "source": "/Users/rajkumaralma/.gradle/caches/8.9/transforms/5a8b2a252d833fae3f92f39e56b506ac/transformed/jetified-mbridge_android_sdk-17.0.61/res/values-v27/values-v27.xml",
+                    "from": {
+                        "startLines": "2,3",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,158",
+                        "endLines": "2,4",
+                        "endColumns": "102,12",
+                        "endOffsets": "153,266"
+                    }
+                }
+            ]
+        }
+    ]
+}

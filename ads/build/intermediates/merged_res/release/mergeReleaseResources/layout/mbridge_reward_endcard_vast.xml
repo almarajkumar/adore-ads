@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mbridge_rl_content"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/mbridge_tv_vasttitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:gravity="center_horizontal"
+        android:text="@string/mbridge_reward_endcard_vast_notice"
+        android:textColor="@color/mbridge_reward_white"
+        android:textSize="19sp" />
+
+    <TextView
+        android:id="@+id/mbridge_tv_vasttag"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:layout_centerHorizontal="true"
+        android:gravity="center_horizontal" />
+
+    <ImageView
+        android:id="@+id/mbridge_iv_vastclose"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginRight="35dp"
+        android:layout_marginTop="45dp"
+        android:layout_toLeftOf="@+id/mbridge_tv_vasttag"
+        android:contentDescription="closeButton"
+        android:src="@drawable/mbridge_reward_vast_end_close" />
+
+    <ImageView
+        android:id="@+id/mbridge_iv_vastok"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginLeft="35dp"
+        android:layout_marginTop="45dp"
+        android:layout_toRightOf="@+id/mbridge_tv_vasttag"
+        android:src="@drawable/mbridge_reward_vast_end_ok" />
+</RelativeLayout>

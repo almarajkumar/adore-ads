@@ -1,0 +1,108 @@
+plugins {
+    id 'com.android.library'
+    id 'maven-publish'
+}
+
+android {
+    namespace 'com.adoreapps.ai.ads'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 24
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+android.publishing {
+    singleVariant("release") {
+        withSourcesJar()
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.findByName("release")
+                groupId = 'com.adoreapps.ai'
+                artifactId = 'ads'
+                version = '1.1.0'
+
+                pom {
+                    name = 'Adore Ads'
+                    description = 'Full-featured Android ad monetization library with AdMob, mediation, auto-refresh, preload, fallback pool, and lifecycle management'
+                }
+            }
+        }
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/${findProperty('gpr.owner') ?: System.getenv('GITHUB_OWNER') ?: 'rajkumaralma'}/adore-ads")
+                credentials {
+                    username = findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+                    password = findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    // AndroidX
+    api 'androidx.appcompat:appcompat:1.7.1'
+    api 'com.google.android.material:material:1.13.0'
+    api 'androidx.lifecycle:lifecycle-process:2.8.7'
+
+    // Firebase
+    api platform('com.google.firebase:firebase-bom:34.8.0')
+    api 'com.google.firebase:firebase-crashlytics'
+    api 'com.google.firebase:firebase-analytics'
+    api 'com.google.firebase:firebase-config'
+
+    // AdMob + Mediation
+    api 'com.google.android.gms:play-services-ads:24.9.0'
+    api 'com.facebook.android:audience-network-sdk:6.21.0'
+    api 'com.google.ads.mediation:facebook:6.21.0.0'
+    api 'com.google.ads.mediation:applovin:13.5.1.0'
+    api 'com.google.ads.mediation:vungle:7.6.3.1'
+    api 'com.google.ads.mediation:mintegral:17.0.61.1'
+    api 'com.google.ads.mediation:pangle:7.8.5.9.0'
+    api 'com.unity3d.ads:unity-ads:4.16.6'
+    api 'com.google.ads.mediation:unity:4.16.6.0'
+
+    // Consent (UMP)
+    api 'com.google.android.ump:user-messaging-platform:4.0.0'
+
+    // UI
+    api 'com.facebook.shimmer:shimmer:0.5.0'
+    api 'com.airbnb.android:lottie:6.6.2'
+
+    // Billing
+    api 'com.android.billingclient:billing:8.0.0'
+
+    // Attribution (Adjust)
+    api 'com.adjust.sdk:adjust-android:5.5.0'
+    api 'com.adjust.sdk:adjust-android-webbridge:5.5.0'
+    api 'com.adjust.sdk:adjust-android-huawei-referrer:5.5.0'
+    api 'com.adjust.sdk:adjust-android-xiaomi-referrer:5.5.0'
+    api 'com.adjust.sdk:adjust-android-samsung-referrer:5.5.0'
+    api 'com.google.android.gms:play-services-ads-identifier:18.3.0'
+    api 'com.android.installreferrer:installreferrer:2.2'
+
+    // Facebook SDK
+    api 'com.facebook.android:facebook-android-sdk:18.1.3'
+
+    // Utils
+    api 'com.google.code.gson:gson:2.11.0'
+}
