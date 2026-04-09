@@ -1,0 +1,39 @@
+# Build outputs
+*.iml
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+*.jar
+!gradle-wrapper.jar
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Local config
+local.properties
+keystore.properties
+*.jks
+*.keystore
+
+# IDE
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test outputs
+.cxx/
+
+# Kotlin
+*.kotlin_module
+
+# Maven publish local
+repo/
