@@ -197,13 +197,22 @@ public final class AdoreAds {
                 config != null && config.isNativeAutoRefreshEnabled());
         NativeAdManager.getInstance().setAutoRefreshEnabled(autoRefresh);
 
-        // App open ad toggle
+        // App open ad toggle + ad unit override
         boolean appOpenEnabled = rcm.getBoolean("ad_app_open_enabled", true);
         if (AppOpenAdManager.getInstance().isInitialized()) {
             if (appOpenEnabled) {
                 AppOpenAdManager.getInstance().enableAppResume();
             } else {
                 AppOpenAdManager.getInstance().disableAppResume();
+            }
+
+            // Override app open ad unit IDs from remote config
+            String appOpenJson = rcm.getJson("ad_app_open_ads");
+            if (appOpenJson != null && !appOpenJson.trim().isEmpty()) {
+                List<String> remoteIds = RemoteAdUnit.toSortedAdIds(appOpenJson);
+                if (!remoteIds.isEmpty()) {
+                    AppOpenAdManager.getInstance().setAdIds(remoteIds);
+                }
             }
         }
 

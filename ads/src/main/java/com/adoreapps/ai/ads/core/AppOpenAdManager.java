@@ -95,6 +95,25 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
         return this.isInitialized;
     }
 
+    /**
+     * Update app open ad unit IDs at runtime (e.g. from remote config).
+     */
+    public void setAdIds(List<String> adIds) {
+        if (adIds != null && !adIds.isEmpty()) {
+            if (AdsMobileAdsManager.getInstance().isUseTestAdIds()) {
+                this.openAppAdIds = new ArrayList<>();
+                this.openAppAdIds.add(com.adoreapps.ai.ads.settings.AdConstants.TEST_APP_OPEN_AD_ID);
+                this.openAppID = com.adoreapps.ai.ads.settings.AdConstants.TEST_APP_OPEN_AD_ID;
+            } else {
+                this.openAppAdIds = new ArrayList<>(adIds);
+                this.openAppID = adIds.get(0);
+            }
+            // Clear current ad so next fetch uses new IDs
+            this.appResumeAd = null;
+            Log.d(TAG, "App open ad IDs updated: " + this.openAppAdIds.size() + " IDs");
+        }
+    }
+
     public void disableLoadAtActivity(Class<?> activityClass) {
         Log.d("AppOpenManager", "disableAppResumeWithActivity: " + activityClass.getName());
         this.disableLoadActivities.add(activityClass);
