@@ -67,14 +67,12 @@
             android:visibility="gone" />
 
         <!-- Bottom card: icon, headline, body, CTA -->
-        <com.google.android.material.card.MaterialCardView
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:layout_margin="12dp"
-            app:cardBackgroundColor="#E6000000"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
+            android:background="#E6000000">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -164,6 +162,6 @@
                     android:layout_height="wrap_content"
                     android:visibility="gone" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </FrameLayout>
     </com.google.android.gms.ads.nativead.NativeAdView>
 </FrameLayout>
