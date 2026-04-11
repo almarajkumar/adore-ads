@@ -197,6 +197,16 @@ public final class AdoreAds {
                 config != null && config.isNativeAutoRefreshEnabled());
         NativeAdManager.getInstance().setAutoRefreshEnabled(autoRefresh);
 
+        // App open ad toggle
+        boolean appOpenEnabled = rcm.getBoolean("ad_app_open_enabled", true);
+        if (AppOpenAdManager.getInstance().isInitialized()) {
+            if (appOpenEnabled) {
+                AppOpenAdManager.getInstance().enableAppResume();
+            } else {
+                AppOpenAdManager.getInstance().disableAppResume();
+            }
+        }
+
         // --- Per-placement overrides ---
         applyPlacementOverrides("native", config != null ? config.getNativePlacements() : null);
         applyPlacementOverrides("inter", config != null ? config.getInterstitialPlacements() : null);
