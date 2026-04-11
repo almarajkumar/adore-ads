@@ -42,6 +42,9 @@ public final class AdConstants {
     /** Max stagger delay (ms) between placement refreshes to avoid thundering herd. */
     public static final long REFRESH_STAGGER_MAX_MS = 5_000L;
 
+    /** Default interstitial ad load timeout (milliseconds). Can be overridden via remote config. */
+    public static final long DEFAULT_INTERSTITIAL_TIMEOUT_MS = 60_000L;
+
     /** SharedPreferences key for interstitial cooldown end timestamp. */
     public static final String PREF_INTERSTITIAL_COOLDOWN_END = "adore_interstitial_cooldown_end";
 

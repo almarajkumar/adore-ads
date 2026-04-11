@@ -40,28 +40,11 @@ public class InterstitialAdManager {
         return instance;
     }
 
-    // Placement enable/disable flags (instance, not static)
-    private volatile boolean showInterstitialAd = true;
-    private boolean showInterOnb1 = false;
-    private boolean showInterOnb2 = false;
-    private boolean showInterMenu1 = false;
-    private boolean showInterMenu2 = false;
-    private boolean showInterList1 = false;
-    private boolean showInterList2 = false;
-    private boolean showInterPicture1 = false;
-    private boolean showInterPicture2 = false;
-    private boolean showInterStore1 = true;
-    private boolean showInterStore2 = true;
-    private boolean showInterGallery1 = true;
-    private boolean showInterGallery2 = true;
-    private boolean showInterSave1 = true;
-    private boolean showInterSave2 = true;
-    private boolean showInterHome1 = true;
-    private boolean showInterHome2 = true;
-    private boolean showInterShareBack = true;
-    private boolean showInterShareHome = true;
+    // Placement enable/disable flags — stored in a map for easy remote config control
+    private final Map<String, Boolean> placementFlags = new ConcurrentHashMap<>();
 
     private long cooldownSeconds = AdConstants.DEFAULT_INTERSTITIAL_COOLDOWN_SECONDS;
+    private long interstitialTimeoutMs = AdConstants.DEFAULT_INTERSTITIAL_TIMEOUT_MS;
 
     // Placement map for config-based loading by key
     private final Map<String, AdUnitsConfig> interstitialAdMap = new ConcurrentHashMap<>();
@@ -128,53 +111,28 @@ public class InterstitialAdManager {
     }
 
     // =========================================================
-    // SETTERS for placement flags (called from remote config etc.)
+    // PLACEMENT FLAGS (Map-based — easy to add new flags from remote config)
     // =========================================================
 
-    public void setShowInterstitialAd(boolean show) { this.showInterstitialAd = show; }
-    public void setShowInterOnb1(boolean show) { this.showInterOnb1 = show; }
-    public void setShowInterOnb2(boolean show) { this.showInterOnb2 = show; }
-    public void setShowInterMenu1(boolean show) { this.showInterMenu1 = show; }
-    public void setShowInterMenu2(boolean show) { this.showInterMenu2 = show; }
-    public void setShowInterList1(boolean show) { this.showInterList1 = show; }
-    public void setShowInterList2(boolean show) { this.showInterList2 = show; }
-    public void setShowInterPicture1(boolean show) { this.showInterPicture1 = show; }
-    public void setShowInterPicture2(boolean show) { this.showInterPicture2 = show; }
-    public void setShowInterStore1(boolean show) { this.showInterStore1 = show; }
-    public void setShowInterStore2(boolean show) { this.showInterStore2 = show; }
-    public void setShowInterGallery1(boolean show) { this.showInterGallery1 = show; }
-    public void setShowInterGallery2(boolean show) { this.showInterGallery2 = show; }
-    public void setShowInterSave1(boolean show) { this.showInterSave1 = show; }
-    public void setShowInterSave2(boolean show) { this.showInterSave2 = show; }
-    public void setShowInterHome1(boolean show) { this.showInterHome1 = show; }
-    public void setShowInterHome2(boolean show) { this.showInterHome2 = show; }
-    public void setShowInterShareBack(boolean show) { this.showInterShareBack = show; }
-    public void setShowInterShareHome(boolean show) { this.showInterShareHome = show; }
+    /**
+     * Set a placement flag by key. Use for remote config or runtime toggles.
+     * Examples: setPlacementFlag("show_inter_onb_1", false)
+     */
+    public void setPlacementFlag(String key, boolean enabled) {
+        placementFlags.put(key, enabled);
+    }
+
+    /**
+     * Check a placement flag. Returns the default value if not set.
+     */
+    public boolean getPlacementFlag(String key, boolean defaultValue) {
+        Boolean value = placementFlags.get(key);
+        return value != null ? value : defaultValue;
+    }
+
     public void setCooldownSeconds(long seconds) { this.cooldownSeconds = seconds; }
-
-    // =========================================================
-    // GETTERS for placement flags
-    // =========================================================
-
-    public boolean isShowInterstitialAd() { return showInterstitialAd; }
-    public boolean isShowInterOnb1() { return showInterOnb1; }
-    public boolean isShowInterOnb2() { return showInterOnb2; }
-    public boolean isShowInterMenu1() { return showInterMenu1; }
-    public boolean isShowInterMenu2() { return showInterMenu2; }
-    public boolean isShowInterList1() { return showInterList1; }
-    public boolean isShowInterList2() { return showInterList2; }
-    public boolean isShowInterPicture1() { return showInterPicture1; }
-    public boolean isShowInterPicture2() { return showInterPicture2; }
-    public boolean isShowInterStore1() { return showInterStore1; }
-    public boolean isShowInterStore2() { return showInterStore2; }
-    public boolean isShowInterGallery1() { return showInterGallery1; }
-    public boolean isShowInterGallery2() { return showInterGallery2; }
-    public boolean isShowInterSave1() { return showInterSave1; }
-    public boolean isShowInterSave2() { return showInterSave2; }
-    public boolean isShowInterHome1() { return showInterHome1; }
-    public boolean isShowInterHome2() { return showInterHome2; }
-    public boolean isShowInterShareBack() { return showInterShareBack; }
-    public boolean isShowInterShareHome() { return showInterShareHome; }
+    public void setInterstitialTimeoutMs(long ms) { this.interstitialTimeoutMs = ms; }
+    public long getInterstitialTimeoutMs() { return interstitialTimeoutMs; }
 
     // =========================================================
     // LOAD & SHOW
@@ -208,7 +166,7 @@ public class InterstitialAdManager {
         }
 
         LoadingAdsDialog loadingAdsDialog = new LoadingAdsDialog(activity);
-        loadingAdsDialog.showWithTimeout(() -> adFinished.onAdFinished());
+        loadingAdsDialog.showWithTimeout(interstitialTimeoutMs, () -> adFinished.onAdFinished());
 
         try {
             ArrayList<String> interAdsID = new ArrayList<>();
@@ -243,7 +201,7 @@ public class InterstitialAdManager {
         }
 
         LoadingAdsDialog loadingAdsDialog = new LoadingAdsDialog(activity);
-        loadingAdsDialog.showWithTimeout(() -> adFinished.onAdFinished());
+        loadingAdsDialog.showWithTimeout(interstitialTimeoutMs, () -> adFinished.onAdFinished());
 
         loadAdRecursive(activity, interstitialAdIds, adFinished, loadingAdsDialog);
     }

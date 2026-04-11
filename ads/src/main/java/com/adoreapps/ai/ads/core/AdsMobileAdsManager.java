@@ -164,14 +164,16 @@ public class AdsMobileAdsManager {
      * Initialize remaining mediation networks in background with parallel execution.
      */
     public void initRemainingNetworksAsync(Context context, boolean hasConsent) {
-        // Initialize networks sequentially on a single background thread to avoid
-        // class-loading lock contention that causes ANR on the main thread.
-        // Parallel init causes 6+ SDK threads to fight over ART's class-loading lock,
-        // starving the main thread during vsync dispatch.
-        ExecutorService serialExecutor = Executors.newSingleThreadExecutor();
+        // Parallel init with 3 threads (Funswap optimization: saves 3-8s vs sequential).
+        // Group SDKs to minimize class-loading lock contention:
+        //   Thread 1: Vungle
+        //   Thread 2: MBridge
+        //   Thread 3: Unity
+        //   Meta: delayed post to main thread (avoids class-loading pressure)
+        ExecutorService parallelExecutor = Executors.newFixedThreadPool(3);
 
-        serialExecutor.execute(() -> {
-            // Step 1: Vungle
+        // Thread 1: Vungle
+        parallelExecutor.execute(() -> {
             try {
                 Log.i("AdInit", "Initializing Vungle...");
                 VunglePrivacySettings.setGDPRStatus(hasConsent, "v1.0.0");
@@ -180,10 +182,12 @@ public class AdsMobileAdsManager {
             } catch (Exception e) {
                 Log.e("AdInit", "Vungle init failed: " + e.getMessage());
             }
+        });
 
-            // Step 2: MBridge
-            // AppLovin 13.6+, Pangle 7.9+, and MBridge 17.1+ read consent from
-            // the IAB TCF string written by UMP — no manual consent setters needed.
+        // Thread 2: MBridge
+        // AppLovin 13.6+, Pangle 7.9+, and MBridge 17.1+ read consent from
+        // the IAB TCF string written by UMP — no manual consent setters needed.
+        parallelExecutor.execute(() -> {
             try {
                 Log.i("AdInit", "Initializing MBridge...");
                 MBridgeSDK mBridgeSDK = MBridgeSDKFactory.getMBridgeSDK();
@@ -192,8 +196,10 @@ public class AdsMobileAdsManager {
             } catch (Exception e) {
                 Log.e("AdInit", "MBridge init failed: " + e.getMessage());
             }
+        });
 
-            // Step 3: Unity
+        // Thread 3: Unity
+        parallelExecutor.execute(() -> {
             try {
                 Log.i("AdInit", "Initializing Unity...");
                 MetaData gdprMetaData = new MetaData(context);
@@ -207,23 +213,23 @@ public class AdsMobileAdsManager {
             } catch (Exception e) {
                 Log.e("AdInit", "Unity init failed: " + e.getMessage());
             }
-
-            // Step 4: Meta Audience Network — only if Facebook is enabled.
-            if (facebookEnabled) {
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    try {
-                        AudienceNetworkInitializeHelper.initialize(context);
-                        Log.i("AdInit", "Meta Audience Network initialized");
-                    } catch (Exception e) {
-                        Log.e("AdInit", "Meta init failed: " + e.getMessage());
-                    }
-                }, 3000);
-            } else {
-                Log.i("AdInit", "Meta Audience Network skipped (Facebook disabled)");
-            }
         });
 
-        serialExecutor.shutdown();
+        // Meta Audience Network — delayed post to main thread (avoids class-loading pressure).
+        if (facebookEnabled) {
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                try {
+                    AudienceNetworkInitializeHelper.initialize(context);
+                    Log.i("AdInit", "Meta Audience Network initialized");
+                } catch (Exception e) {
+                    Log.e("AdInit", "Meta init failed: " + e.getMessage());
+                }
+            }, 3000);
+        } else {
+            Log.i("AdInit", "Meta Audience Network skipped (Facebook disabled)");
+        }
+
+        parallelExecutor.shutdown();
     }
 
     /**
@@ -265,7 +271,7 @@ public class AdsMobileAdsManager {
 
         } catch (Exception var4) {
             Exception e = var4;
-            e.printStackTrace();
+            Log.e("AdsMobileAdsManager", "Error: " + e.getMessage());
         }
 
     }
@@ -708,7 +714,7 @@ public class AdsMobileAdsManager {
                 });
             } catch (Exception var8) {
                 Exception e = var8;
-                e.printStackTrace();
+                Log.e("AdsMobileAdsManager", "Error: " + e.getMessage());
             }
 
         }
@@ -1008,7 +1014,7 @@ public class AdsMobileAdsManager {
             adView.setMediaView((MediaView)adView.findViewById(R.id.ad_media));
         } catch (Exception var10) {
             e = var10;
-            e.printStackTrace();
+            Log.e("AdsMobileAdsManager", "Error: " + e.getMessage());
         }
 
         try {
@@ -1016,7 +1022,7 @@ public class AdsMobileAdsManager {
             ((TextView)adView.getHeadlineView()).setText(nativeAd.getHeadline());
         } catch (Exception var9) {
             e = var9;
-            e.printStackTrace();
+            Log.e("AdsMobileAdsManager", "Error: " + e.getMessage());
         }
 
         try {
@@ -1029,7 +1035,7 @@ public class AdsMobileAdsManager {
             }
         } catch (Exception var8) {
             e = var8;
-            e.printStackTrace();
+            Log.e("AdsMobileAdsManager", "Error: " + e.getMessage());
         }
 
         try {
@@ -1042,7 +1048,7 @@ public class AdsMobileAdsManager {
             }
         } catch (Exception var7) {
             e = var7;
-            e.printStackTrace();
+            Log.e("AdsMobileAdsManager", "Error: " + e.getMessage());
         }
 
         try {
@@ -1055,7 +1061,7 @@ public class AdsMobileAdsManager {
             }
         } catch (Exception var6) {
             e = var6;
-            e.printStackTrace();
+            Log.e("AdsMobileAdsManager", "Error: " + e.getMessage());
         }
 
         try {
@@ -1068,7 +1074,7 @@ public class AdsMobileAdsManager {
             }
         } catch (Exception var5) {
             e = var5;
-            e.printStackTrace();
+            Log.e("AdsMobileAdsManager", "Error: " + e.getMessage());
         }
 
         try {
@@ -1081,7 +1087,7 @@ public class AdsMobileAdsManager {
             }
         } catch (Exception var4) {
             e = var4;
-            e.printStackTrace();
+            Log.e("AdsMobileAdsManager", "Error: " + e.getMessage());
         }
 
         adView.setNativeAd(nativeAd);

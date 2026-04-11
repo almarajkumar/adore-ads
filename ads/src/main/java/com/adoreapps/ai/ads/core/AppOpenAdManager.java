@@ -80,7 +80,7 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
         if(AdsMobileAdsManager.getInstance().isUseTestAdIds()) {
             this.openAppAdIds = new ArrayList<>();
             this.openAppAdIds.add(com.adoreapps.ai.ads.settings.AdConstants.TEST_APP_OPEN_AD_ID);
-            this.openAppID = this.openAppAdIds.get(0);
+            this.openAppID = com.adoreapps.ai.ads.settings.AdConstants.TEST_APP_OPEN_AD_ID;
         }
         else {
             this.openAppAdIds = new ArrayList<>(appOpenAdIds);
@@ -222,7 +222,7 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
             this.dialog.dismiss();
         } catch (Exception var2) {
             Exception e = var2;
-            e.printStackTrace();
+            Log.e(TAG, "AppOpenAd error: " + e.getMessage());
         }
 
     }
@@ -244,7 +244,7 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
                 } catch (Exception var3) {
                     Exception e = var3;
                     this.dialog = null;
-                    e.printStackTrace();
+                    Log.e(TAG, "AppOpenAd error: " + e.getMessage());
                 }
 
                 Dialog finalDialog = this.dialog;

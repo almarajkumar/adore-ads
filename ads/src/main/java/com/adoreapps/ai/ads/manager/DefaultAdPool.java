@@ -198,6 +198,38 @@ public class DefaultAdPool {
         return AdSettingsStore.getInstance(activity).getBoolean("preload_default_native", true);
     }
 
+    /**
+     * Returns the cached default native ad WITHOUT consuming it.
+     * The same ad can be shared across multiple failed placements.
+     * A background replacement load is triggered to keep the pool fresh.
+     *
+     * This is the Funswap optimization: shared native ads reduce request volume
+     * while maintaining fill rate across all positions.
+     */
+    @Nullable
+    public synchronized AdsResponse<NativeAd> getDefaultNativeAd(Activity activity) {
+        if (!canServe(activity)) return null;
+        if (!AdSettingsStore.getInstance(activity).getBoolean("preload_default_native", true)) return null;
+        cleanExpired(cachedNativeAds, nativeLoadTimes);
+
+        if (cachedNativeAds.isEmpty()) {
+            preloadNative(activity);
+            return null;
+        }
+
+        AdsResponse<NativeAd> ad = cachedNativeAds.get(0);
+        Log.d(TAG, "Default native shared (not consumed), pool size: " + cachedNativeAds.size());
+
+        // Load a replacement in background to keep pool fresh
+        loadReplacementNative(activity);
+        return ad;
+    }
+
+    /**
+     * Consumes and removes the default native ad from the pool.
+     * Use this only when the ad must be exclusively owned (e.g., full-screen native).
+     * For most cases, prefer {@link #getDefaultNativeAd(Activity)} (shared/non-consuming).
+     */
     @Nullable
     public synchronized AdsResponse<NativeAd> consumeDefaultNativeAd(Activity activity) {
         if (!canServe(activity)) return null;
@@ -214,6 +246,16 @@ public class DefaultAdPool {
         preloadNative(activity);
         Log.d(TAG, "Default native consumed, remaining: " + cachedNativeAds.size());
         return ad;
+    }
+
+    /**
+     * Load a replacement native ad in background without blocking.
+     * Called after sharing a native ad to keep the pool fresh for next use.
+     */
+    private void loadReplacementNative(Activity activity) {
+        if (nativeLoading) return;
+        if (!canLoad(activity)) return;
+        preloadNative(activity);
     }
 
     // =========================================================

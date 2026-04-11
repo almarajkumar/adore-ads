@@ -4,7 +4,6 @@ public class ApAdBase {
     protected StatusAd statusAd;
 
     public ApAdBase(StatusAd statusAd) {
-        this.statusAd = StatusAd.AD_INIT;
         this.statusAd = statusAd;
     }
 
@@ -20,15 +19,15 @@ public class ApAdBase {
         this.statusAd = statusAd;
     }
 
-    public Boolean isReady() {
+    public boolean isReady() {
         return this.statusAd == StatusAd.AD_LOADED;
     }
 
-    public Boolean isLoading() {
+    public boolean isLoading() {
         return this.statusAd == StatusAd.AD_LOADING;
     }
 
-    public Boolean isLoadFail() {
+    public boolean isLoadFail() {
         return this.statusAd == StatusAd.AD_LOAD_FAIL;
     }
 }

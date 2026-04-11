@@ -14,6 +14,7 @@ import com.adoreapps.ai.ads.manager.InterstitialAdManager;
 import com.adoreapps.ai.ads.manager.NativeAdManager;
 import com.adoreapps.ai.ads.manager.RewardAdManager;
 import com.adoreapps.ai.ads.model.RemoteAdUnit;
+import com.adoreapps.ai.ads.settings.AdConstants;
 import com.adoreapps.ai.ads.utils.RemoteConfigManager;
 
 import java.util.List;
@@ -171,6 +172,10 @@ public final class AdoreAds {
         long cooldown = rcm.getLong("adore_interstitial_cooldown",
                 config != null ? config.getInterstitialCooldownSeconds() : 30);
         InterstitialAdManager.getInstance().setCooldownSeconds(cooldown);
+
+        long interTimeout = rcm.getLong("adore_interstitial_timeout_ms",
+                AdConstants.DEFAULT_INTERSTITIAL_TIMEOUT_MS);
+        InterstitialAdManager.getInstance().setInterstitialTimeoutMs(interTimeout);
 
         long refreshInterval = rcm.getLong("adore_native_refresh_interval",
                 config != null ? config.getNativeRefreshIntervalSeconds() : 20);

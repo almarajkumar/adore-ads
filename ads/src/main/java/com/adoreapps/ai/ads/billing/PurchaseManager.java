@@ -107,7 +107,10 @@ public class PurchaseManager {
 
                 ProductDetails details = productDetailsList.getProductDetailsList().get(0);
 
+                if (details.getSubscriptionOfferDetails() == null
+                        || details.getSubscriptionOfferDetails().isEmpty()) return;
                 ProductDetails.SubscriptionOfferDetails offer = details.getSubscriptionOfferDetails().get(0);
+                if (offer.getPricingPhases().getPricingPhaseList().isEmpty()) return;
                 ProductDetails.PricingPhase phase = offer.getPricingPhases().getPricingPhaseList().get(0);
 
                 String formattedPrice = phase.getFormattedPrice();    // "$4.99"
@@ -210,12 +213,13 @@ public class PurchaseManager {
     private Purchase getPurchase(String productId) {
         for(int i = 0; i < this.purchaseList.size(); ++i) {
             try {
-                if (((String)((Purchase)this.purchaseList.get(i)).getProducts().get(0)).equals(productId)) {
-                    return (Purchase)this.purchaseList.get(i);
+                Purchase purchase = this.purchaseList.get(i);
+                if (!purchase.getProducts().isEmpty()
+                        && purchase.getProducts().get(0).equals(productId)) {
+                    return purchase;
                 }
-            } catch (Exception var4) {
-                Exception e = var4;
-                e.printStackTrace();
+            } catch (Exception e) {
+                Log.e("PurchaseManager", "getPurchase error: " + e.getMessage());
             }
         }
 

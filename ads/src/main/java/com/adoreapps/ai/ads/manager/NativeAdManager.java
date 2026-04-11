@@ -368,6 +368,40 @@ public class NativeAdManager {
     }
 
     // =========================================================
+    // BATCH PRELOAD (Funswap optimization: preload multiple positions at once)
+    // =========================================================
+
+    /**
+     * Preload multiple native ad positions in one call.
+     * Useful during splash to preload all positions the user will see.
+     *
+     * @param activity   Current activity
+     * @param positions  List of placement keys to preload
+     */
+    public void preloadMultiple(Activity activity, List<String> positions) {
+        if (positions == null) return;
+        for (String position : positions) {
+            load(activity, position, new AdCallback() {});
+        }
+    }
+
+    /**
+     * Preload multiple positions with a delay between each to avoid request flooding.
+     *
+     * @param activity     Current activity
+     * @param positions    List of placement keys to preload
+     * @param delayMs      Delay between each preload (e.g. 500ms)
+     */
+    public void preloadMultipleStaggered(Activity activity, List<String> positions, long delayMs) {
+        if (positions == null) return;
+        Handler handler = new Handler(Looper.getMainLooper());
+        for (int i = 0; i < positions.size(); i++) {
+            String position = positions.get(i);
+            handler.postDelayed(() -> load(activity, position, new AdCallback() {}), delayMs * i);
+        }
+    }
+
+    // =========================================================
     // PRELOAD (for loading ads ahead of time)
     // =========================================================
 
@@ -569,7 +603,7 @@ public class NativeAdManager {
                         public void onAdFailedToLoad(@NonNull ApAdError error) {
                             adStatusMap.put(position, AdStatus.FAILED);
                             // Try default fallback pool
-                            AdsResponse<NativeAd> defaultAd = DefaultAdPool.getInstance().consumeDefaultNativeAd(activity);
+                            AdsResponse<NativeAd> defaultAd = DefaultAdPool.getInstance().getDefaultNativeAd(activity);
                             if (defaultAd != null) {
                                 showNativeAd(activity, defaultAd, placeHolder, layoutId, shimmer);
                             } else {
@@ -637,7 +671,7 @@ public class NativeAdManager {
                     @Override
                     public void onAdFailedToLoad(@NonNull ApAdError error) {
                         // Try default fallback pool
-                        AdsResponse<NativeAd> defaultAd = DefaultAdPool.getInstance().consumeDefaultNativeAd(activity);
+                        AdsResponse<NativeAd> defaultAd = DefaultAdPool.getInstance().getDefaultNativeAd(activity);
                         if (defaultAd != null) {
                             showNativeAd(activity, defaultAd, placeHolder, layoutId, shimmer);
                         } else {

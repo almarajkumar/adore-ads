@@ -10,8 +10,12 @@ import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
 
 /**
  * Singleton wrapper around Firebase Remote Config.
- * Provides typed getters and integrates with the Adore Ads library
- * for dynamic ad configuration from the Firebase Console.
+ *
+ * Uses the "activate-first" strategy from Funswap optimization:
+ * 1. activate() — instantly applies cached/default values (~0ms)
+ * 2. fetch() — downloads fresh values in background for next session
+ *
+ * This avoids the 10-30s blocking delay of fetchAndActivate().
  */
 public class RemoteConfigManager {
 
@@ -20,9 +24,6 @@ public class RemoteConfigManager {
     private final FirebaseRemoteConfig remoteConfig;
     private boolean isReady = false;
 
-    /**
-     * Callback for remote config fetch completion.
-     */
     public interface OnRemoteConfigReadyListener {
         void onReady(boolean success);
     }
@@ -46,10 +47,6 @@ public class RemoteConfigManager {
         return instance;
     }
 
-    /**
-     * Set XML defaults resource (e.g. R.xml.remote_config_defaults).
-     * Call before init() to ensure defaults are available on first launch.
-     */
     public void setDefaultsResourceId(@XmlRes int xmlResId) {
         if (xmlResId != 0) {
             remoteConfig.setDefaultsAsync(xmlResId);
@@ -57,18 +54,47 @@ public class RemoteConfigManager {
     }
 
     /**
-     * Fetch and activate remote config, then invoke callback.
-     * On failure, activated cache (or defaults) are still usable.
+     * Fast init: activate cached values instantly, then fetch fresh in background.
+     *
+     * Step 1: activate() — applies previously fetched values (or defaults). Instant.
+     * Step 2: callback fires — app can proceed immediately with cached config.
+     * Step 3: fetch() runs in background — fresh values available for next activate().
+     *
+     * On first-ever launch (no cache), defaults from setDefaultsResourceId() are used.
      */
     public void init(@NonNull OnRemoteConfigReadyListener listener) {
+        isReady = false;
+
+        // Step 1: Activate cached/default values instantly
+        remoteConfig.activate().addOnCompleteListener(activateTask -> {
+            isReady = true;
+            Log.i(TAG, "Remote config activated (cached/defaults)");
+            listener.onReady(true);
+
+            // Step 2: Fetch fresh values in background for next session
+            remoteConfig.fetch().addOnCompleteListener(fetchTask -> {
+                if (fetchTask.isSuccessful()) {
+                    Log.i(TAG, "Remote config fetched in background (available next activate)");
+                } else {
+                    Log.w(TAG, "Background remote config fetch failed");
+                }
+            });
+        });
+    }
+
+    /**
+     * Full blocking fetch+activate. Use only when you need fresh values immediately
+     * (e.g., user manually triggered "refresh config").
+     */
+    public void fetchAndActivateNow(@NonNull OnRemoteConfigReadyListener listener) {
         isReady = false;
         remoteConfig.fetchAndActivate().addOnCompleteListener(task -> {
             isReady = true;
             boolean success = task.isSuccessful();
             if (!success) {
-                Log.w(TAG, "Remote config fetch failed, using cached/defaults");
+                Log.w(TAG, "fetchAndActivate failed, using cached/defaults");
             } else {
-                Log.i(TAG, "Remote config fetched and activated");
+                Log.i(TAG, "fetchAndActivate succeeded");
             }
             listener.onReady(success);
         });
@@ -89,15 +115,12 @@ public class RemoteConfigManager {
         return isReady;
     }
 
-    /**
-     * Direct access to FirebaseRemoteConfig for app-specific keys.
-     */
     public FirebaseRemoteConfig getRemoteConfig() {
         return remoteConfig;
     }
 
     // =========================================================
-    // TYPED GETTERS (convenience wrappers)
+    // TYPED GETTERS
     // =========================================================
 
     public String getString(String key, String defaultValue) {
@@ -106,8 +129,6 @@ public class RemoteConfigManager {
     }
 
     public boolean getBoolean(String key, boolean defaultValue) {
-        // FirebaseRemoteConfig.getBoolean returns false for missing keys,
-        // so check if the key was actually set in remote config
         if (remoteConfig.getInfo().getLastFetchStatus() == FirebaseRemoteConfig.LAST_FETCH_STATUS_SUCCESS
                 || remoteConfig.getValue(key).getSource() != FirebaseRemoteConfig.VALUE_SOURCE_DEFAULT) {
             return remoteConfig.getBoolean(key);
@@ -117,7 +138,6 @@ public class RemoteConfigManager {
 
     public long getLong(String key, long defaultValue) {
         long value = remoteConfig.getLong(key);
-        // Remote config returns 0 for missing keys; use default if 0 and not explicitly set
         if (value == 0 && remoteConfig.getValue(key).getSource() == FirebaseRemoteConfig.VALUE_SOURCE_STATIC) {
             return defaultValue;
         }
@@ -132,9 +152,6 @@ public class RemoteConfigManager {
         return value;
     }
 
-    /**
-     * Get a JSON string value (for parsing RemoteAdUnit arrays).
-     */
     public String getJson(String key) {
         return remoteConfig.getString(key);
     }

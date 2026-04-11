@@ -166,33 +166,26 @@ public class RewardAdManager {
         );
     }
 
+    /**
+     * Build ad ID list from the registered placement map.
+     * Falls back to default reward ad ID if placement not found.
+     */
     private ArrayList<String> buildAdIdList(boolean enabledHigh, boolean enabledLow, String adPlace) {
-        String highAdId;
-        String lowAdId;
-        switch (adPlace) {
-            case "watermark":
-                highAdId = AdsConfig.reward_wtm_704;
-                lowAdId = AdsConfig.reward_wtm_704;
-                break;
-            case "sticker":
-                highAdId = AdsConfig.reward_sticker_702;
-                lowAdId = AdsConfig.reward_sticker_702;
-                break;
-            case "store":
-                highAdId = AdsConfig.reward_store_502_1;
-                lowAdId = AdsConfig.reward_store_502_2;
-                break;
-            case "generate":
-                highAdId = AdsConfig.miniature_reward_high_501;
-                lowAdId = AdsConfig.miniature_reward_501;
-                break;
-            default:
-                highAdId = AdsConfig.reward_store_502_1;
-                lowAdId = AdsConfig.reward_store_502_2;
+        AdUnitsConfig config = rewardAdMap.get(adPlace);
+        if (config != null && !config.adUnitIds.isEmpty()) {
+            ArrayList<String> ids = new ArrayList<>();
+            for (int i = 0; i < config.adUnitIds.size(); i++) {
+                if (i == 0 && enabledHigh) ids.add(config.adUnitIds.get(i));
+                else if (i == 1 && enabledLow) ids.add(config.adUnitIds.get(i));
+                else if (i > 1) ids.add(config.adUnitIds.get(i));
+            }
+            return ids;
         }
+        // Fallback: use default reward ad ID
         ArrayList<String> ids = new ArrayList<>();
-        if (enabledHigh) ids.add(highAdId);
-        if (enabledLow) ids.add(lowAdId);
+        String defaultId = AdsMobileAdsManager.getInstance().isUseTestAdIds()
+                ? AdConstants.TEST_REWARD_AD_ID : AdsConfig.rewardDefaultId;
+        if (enabledHigh || enabledLow) ids.add(defaultId);
         return ids;
     }
 
@@ -297,7 +290,7 @@ public class RewardAdManager {
                         } else {
                             loadingAdsDialog.dismiss();
                             onRewardComplete.onAdFailed();
-                            Toast.makeText(activity, "Reward Ad not available", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(activity, "Reward Ad Not Available", Toast.LENGTH_SHORT).show();
                         }
                     }
 
