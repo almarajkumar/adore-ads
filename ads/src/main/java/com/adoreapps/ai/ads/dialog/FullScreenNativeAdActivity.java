@@ -10,28 +10,17 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import com.adoreapps.ai.ads.AdCallback;
-import com.adoreapps.ai.ads.AdoreAds;
 import com.adoreapps.ai.ads.R;
 import com.adoreapps.ai.ads.manager.NativeAdManager;
-import com.adoreapps.ai.ads.model.AdsResponse;
 import com.adoreapps.ai.ads.settings.AdConstants;
-import com.google.android.gms.ads.nativead.NativeAd;
 
 /**
- * Full-screen Activity for displaying a native ad with countdown timer and skip button.
+ * Full-screen Activity for displaying a native ad with countdown timer and skip/close button.
  *
  * <h3>Usage:</h3>
  * <pre>
  * FullScreenNativeAdActivity.show(activity, "NATIVE_SPLASH", 5, true);
  * </pre>
- *
- * <h3>Features:</h3>
- * <ul>
- *   <li>Countdown timer (e.g. "5", "4", "3"...) before skip button appears</li>
- *   <li>Optional skip button (can be replaced with close button)</li>
- *   <li>Auto-close after countdown if no skip button</li>
- *   <li>Uses preloaded ad from NativeAdManager cache if available</li>
- * </ul>
  */
 public class FullScreenNativeAdActivity extends Activity {
 
@@ -48,10 +37,10 @@ public class FullScreenNativeAdActivity extends Activity {
     /**
      * Launch the full-screen native ad activity.
      *
-     * @param activity        Host activity
-     * @param placementKey    Native placement key (must be preloaded or registered)
-     * @param countdownSeconds Seconds before skip button appears (0 = skip immediately visible)
-     * @param showSkipButton  If true, shows skip button after countdown. If false, auto-closes after countdown.
+     * @param activity         Host activity
+     * @param placementKey     Native placement key (must be preloaded or registered)
+     * @param countdownSeconds Seconds before skip/close button appears (0 = immediately visible)
+     * @param showSkipButton   true = "Skip" button after countdown, false = "Close" button
      */
     public static void show(Activity activity, String placementKey, int countdownSeconds, boolean showSkipButton) {
         Intent intent = new Intent(activity, FullScreenNativeAdActivity.class);
@@ -61,9 +50,7 @@ public class FullScreenNativeAdActivity extends Activity {
         activity.startActivityForResult(intent, 100);
     }
 
-    /**
-     * Launch with default countdown (5 seconds) and skip button enabled.
-     */
+    /** Launch with default countdown (5 seconds) and skip button. */
     public static void show(Activity activity, String placementKey) {
         show(activity, placementKey, AdConstants.FULL_SCREEN_COUNTDOWN_SECONDS, true);
     }
@@ -77,22 +64,21 @@ public class FullScreenNativeAdActivity extends Activity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN
         );
 
-        setContentView(R.layout.adore_native_full_screen);
+        // Use the wrapper layout (ad container + overlay countdown/skip)
+        setContentView(R.layout.adore_activity_full_screen_native);
 
         String placement = getIntent().getStringExtra(EXTRA_PLACEMENT);
         int countdown = getIntent().getIntExtra(EXTRA_COUNTDOWN, AdConstants.FULL_SCREEN_COUNTDOWN_SECONDS);
         boolean showSkip = getIntent().getBooleanExtra(EXTRA_SHOW_SKIP, true);
 
+        FrameLayout adContainer = findViewById(R.id.ad_container);
         TextView tvCountdown = findViewById(R.id.tv_countdown);
         TextView btnSkip = findViewById(R.id.btn_skip);
 
-        // Load or use preloaded native ad
-        FrameLayout container = findViewById(android.R.id.content);
-        NativeAdManager nativeManager = NativeAdManager.getInstance();
-
-        nativeManager.loadAndShow(
+        // Load and show native ad in the container, using the full-screen native layout
+        NativeAdManager.getInstance().loadAndShow(
                 this,
-                container,
+                adContainer,
                 null,
                 R.layout.adore_native_full_screen,
                 placement != null ? placement : "NATIVE_SPLASH",
@@ -100,6 +86,7 @@ public class FullScreenNativeAdActivity extends Activity {
                     @Override
                     public void onNativeAds(com.adoreapps.ai.ads.wrapper.ApAdNative nativeAd, String unitID) {
                         super.onNativeAds(nativeAd, unitID);
+                        // Ad loaded — start countdown overlay
                         startCountdown(countdown, showSkip, tvCountdown, btnSkip);
                     }
 
@@ -114,6 +101,7 @@ public class FullScreenNativeAdActivity extends Activity {
 
         // Skip/close button action
         btnSkip.setOnClickListener(v -> {
+            if (countDownTimer != null) countDownTimer.cancel();
             setResult(RESULT_AD_SKIPPED);
             finish();
         });
@@ -122,13 +110,9 @@ public class FullScreenNativeAdActivity extends Activity {
     private void startCountdown(int seconds, boolean showSkipAfter,
                                  TextView tvCountdown, TextView btnSkip) {
         if (seconds <= 0) {
-            if (showSkipAfter) {
-                btnSkip.setText("Skip");
-                btnSkip.setVisibility(View.VISIBLE);
-            } else {
-                setResult(RESULT_AD_SHOWN);
-                finish();
-            }
+            btnSkip.setText(showSkipAfter ? "Skip" : "Close");
+            btnSkip.setVisibility(View.VISIBLE);
+            setResult(RESULT_AD_SHOWN);
             return;
         }
 
@@ -145,13 +129,8 @@ public class FullScreenNativeAdActivity extends Activity {
             @Override
             public void onFinish() {
                 tvCountdown.setVisibility(View.GONE);
-                if (showSkipAfter) {
-                    btnSkip.setText("Skip");
-                    btnSkip.setVisibility(View.VISIBLE);
-                } else {
-                    btnSkip.setText("Close");
-                    btnSkip.setVisibility(View.VISIBLE);
-                }
+                btnSkip.setText(showSkipAfter ? "Skip" : "Close");
+                btnSkip.setVisibility(View.VISIBLE);
                 setResult(RESULT_AD_SHOWN);
             }
         };

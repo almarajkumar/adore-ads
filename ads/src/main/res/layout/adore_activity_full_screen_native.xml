@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- Ad container — NativeAdManager renders the ad here -->
+    <FrameLayout
+        android:id="@+id/ad_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Overlay: countdown + skip (always on top of ad) -->
+    <TextView
+        android:id="@+id/tv_countdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:background="#CC000000"
+        android:paddingStart="14dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="8dp"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/btn_skip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:background="#CC000000"
+        android:paddingStart="20dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="8dp"
+        android:text="Skip"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+</FrameLayout>
