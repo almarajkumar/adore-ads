@@ -433,6 +433,41 @@ RewardAdManager.getInstance().addPlacement("KEY", placementConfig);
 BannerAdManager.getInstance().addPlacement("KEY", placementConfig);
 ```
 
+### Bundled Native Ad Layouts (v1.3.0)
+
+The library includes 4 native ad layouts with matching shimmer placeholders:
+
+```java
+// Use via AdoreLayouts constants
+AdoreLayouts.NATIVE_FULL_SCREEN   // Full-screen with countdown + skip
+AdoreLayouts.NATIVE_LARGE         // Card with 16:9 media
+AdoreLayouts.NATIVE_MEDIUM        // Card with 120dp media
+AdoreLayouts.NATIVE_SMALL         // Horizontal row, no media
+
+// Matching shimmers
+AdoreLayouts.SHIMMER_FULL_SCREEN
+AdoreLayouts.SHIMMER_LARGE
+AdoreLayouts.SHIMMER_MEDIUM
+AdoreLayouts.SHIMMER_SMALL
+```
+
+**Full-screen native with countdown:**
+```java
+FullScreenNativeAdActivity.show(activity, "NATIVE_SPLASH", 5, true);
+```
+
+**Overriding layouts:** Create a file with the same name in your app's `res/layout/` to override any bundled layout. Android resource merging gives your app's version priority. Keep all required view IDs (`ad_media`, `ad_app_icon`, `ad_headline`, `ad_body`, `ad_call_to_action`).
+
+```
+app/src/main/res/layout/adore_native_medium.xml   <-- overrides library version
+```
+
+Or use your own custom layout directly:
+```java
+nativeAds().showWithAutoRefresh(activity, container, shimmer,
+    R.layout.my_custom_layout, "NATIVE_HOME", "tag", this);
+```
+
 ---
 
 ## Ad Waterfall

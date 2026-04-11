@@ -174,27 +174,26 @@ public final class AdoreAds {
     public void applyRemoteConfig() {
         RemoteConfigManager rcm = RemoteConfigManager.getInstance();
 
-        // --- Global toggles ---
-        boolean adsEnabled = rcm.getBoolean("adore_ads_enabled", config != null && config.isAdsEnabled());
+        // --- Global toggles (ad_{setting}) ---
+        boolean adsEnabled = rcm.getBoolean("ad_enabled", config != null && config.isAdsEnabled());
         AdsMobileAdsManager.getInstance().setAdsEnabled(adsEnabled);
 
-        long cooldown = rcm.getLong("adore_interstitial_cooldown",
+        long cooldown = rcm.getLong("ad_interstitial_cooldown",
                 config != null ? config.getInterstitialCooldownSeconds() : 30);
         InterstitialAdManager.getInstance().setCooldownSeconds(cooldown);
 
-        long interTimeout = rcm.getLong("adore_interstitial_timeout_ms",
+        long interTimeout = rcm.getLong("ad_interstitial_timeout_ms",
                 AdConstants.DEFAULT_INTERSTITIAL_TIMEOUT_MS);
         InterstitialAdManager.getInstance().setInterstitialTimeoutMs(interTimeout);
 
-        long refreshInterval = rcm.getLong("adore_native_refresh_interval",
+        long refreshInterval = rcm.getLong("ad_native_refresh_interval",
                 config != null ? config.getNativeRefreshIntervalSeconds() : 20);
-        // Store for NativeAdManager to pick up via AdSettingsStore
         if (application != null) {
             com.adoreapps.ai.ads.settings.AdSettingsStore.getInstance(application)
                     .setLong("native_refresh_interval", refreshInterval);
         }
 
-        boolean autoRefresh = rcm.getBoolean("adore_native_auto_refresh_enabled",
+        boolean autoRefresh = rcm.getBoolean("ad_native_auto_refresh_enabled",
                 config != null && config.isNativeAutoRefreshEnabled());
         NativeAdManager.getInstance().setAutoRefreshEnabled(autoRefresh);
 
@@ -219,9 +218,11 @@ public final class AdoreAds {
 
     /**
      * Apply remote config overrides to a set of placements.
-     * For each placement key, checks for:
-     *   - adore_{type}_{KEY}_enabled → boolean toggle
-     *   - adore_{type}_{KEY}_ads → JSON array of RemoteAdUnit
+     * Key format: ad_{type}_{position_lowercase}_enabled / _ads
+     *
+     * Example: placement "NATIVE_HOME" with type "native"
+     *   → ad_native_home_enabled
+     *   → ad_native_home_ads
      */
     private void applyPlacementOverrides(String type, Map<String, PlacementConfig> placements) {
         if (placements == null) return;
@@ -231,13 +232,16 @@ public final class AdoreAds {
             String key = entry.getKey();
             PlacementConfig pc = entry.getValue();
 
+            // Convert "NATIVE_HOME" → "home", "INTER_SAVE" → "save", "REWARD_BONUS" → "bonus"
+            String position = toShortPosition(key);
+
             // Enable/disable toggle
-            String enabledKey = "adore_" + type + "_" + key + "_enabled";
+            String enabledKey = "ad_" + type + "_" + position + "_enabled";
             boolean enabled = rcm.getBoolean(enabledKey, pc.isEnabled());
             pc.setEnabled(enabled);
 
             // Ad unit ID override (JSON array)
-            String adsKey = "adore_" + type + "_" + key + "_ads";
+            String adsKey = "ad_" + type + "_" + position + "_ads";
             String json = rcm.getJson(adsKey);
             if (json != null && !json.trim().isEmpty()) {
                 List<String> remoteIds = RemoteAdUnit.toSortedAdIds(json);
@@ -246,6 +250,28 @@ public final class AdoreAds {
                 }
             }
         }
+    }
+
+    /**
+     * Convert a placement key to a short lowercase position name for remote config keys.
+     * Examples:
+     *   "NATIVE_HOME"    → "home"
+     *   "NATIVE_SPLASH"  → "splash"
+     *   "INTER_SAVE"     → "save"
+     *   "REWARD_BONUS"   → "bonus"
+     *   "BANNER_HOME"    → "home"
+     *   "MY_CUSTOM_KEY"  → "my_custom_key" (passthrough if no prefix match)
+     */
+    private String toShortPosition(String placementKey) {
+        if (placementKey == null) return "";
+        String lower = placementKey.toLowerCase();
+        // Strip common prefixes: NATIVE_, INTER_, REWARD_, BANNER_
+        for (String prefix : new String[]{"native_", "inter_", "reward_", "banner_"}) {
+            if (lower.startsWith(prefix)) {
+                return lower.substring(prefix.length());
+            }
+        }
+        return lower;
     }
 
     /**
