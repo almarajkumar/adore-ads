@@ -1,73 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.facebook.shimmer.ShimmerFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/shimmer_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1A1A1A">
+    android:background="#1A1A1A"
+    app:shimmer_auto_start="true">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="bottom"
-        android:orientation="vertical">
+        android:paddingTop="30dp">
 
         <!-- Media placeholder -->
         <View
+            android:id="@+id/shim_media"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:background="#2A2A2A" />
+            android:layout_marginBottom="4dp"
+            android:background="#2A2A2A"
+            app:layout_constraintBottom_toTopOf="@id/shim_headline"
+            app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Bottom card placeholder -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="12dp"
+        <View
+            android:id="@+id/shim_headline"
+            android:layout_width="200dp"
+            android:layout_height="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="8dp"
+            android:background="#3A3A3A"
+            app:layout_constraintBottom_toTopOf="@id/shim_body"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <View
+            android:id="@+id/shim_body"
+            android:layout_width="0dp"
+            android:layout_height="12dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="20dp"
             android:background="#333333"
-            android:orientation="vertical"
-            android:padding="12dp">
+            app:layout_constraintBottom_toTopOf="@id/shim_cta"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <View
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="#444444" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <View
-                        android:layout_width="180dp"
-                        android:layout_height="14dp"
-                        android:background="#444444" />
-
-                    <View
-                        android:layout_width="120dp"
-                        android:layout_height="10dp"
-                        android:layout_marginTop="6dp"
-                        android:background="#3A3A3A" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="12dp"
-                android:layout_marginTop="10dp"
-                android:background="#3A3A3A" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="44dp"
-                android:layout_marginTop="10dp"
-                android:background="#444444" />
-        </LinearLayout>
-    </LinearLayout>
+        <View
+            android:id="@+id/shim_cta"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="12dp"
+            android:background="#444444"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </com.facebook.shimmer.ShimmerFrameLayout>

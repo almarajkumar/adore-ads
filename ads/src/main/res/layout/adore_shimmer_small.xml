@@ -1,48 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.facebook.shimmer.ShimmerFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/shimmer_container"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp">
 
-    <LinearLayout
+    <com.facebook.shimmer.ShimmerFrameLayout
+        android:id="@+id/shimmer_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#FFFFFF"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="10dp">
+        app:shimmer_auto_start="true">
 
-        <!-- Icon placeholder -->
-        <View
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="#E0E0E0" />
-
-        <!-- Text placeholders -->
-        <LinearLayout
-            android:layout_width="0dp"
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            app:cardBackgroundColor="#F1F1F3"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp">
 
-            <View
-                android:layout_width="140dp"
-                android:layout_height="13dp"
-                android:background="#E0E0E0" />
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="10dp">
 
-            <View
-                android:layout_width="200dp"
-                android:layout_height="11dp"
-                android:layout_marginTop="5dp"
-                android:background="#EBEBEB" />
-        </LinearLayout>
+                <!-- Icon -->
+                <View
+                    android:id="@+id/shim_icon"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_centerVertical="true"
+                    android:background="@drawable/adore_shimmer_placeholder" />
 
-        <!-- CTA placeholder -->
-        <View
-            android:layout_width="80dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="8dp"
-            android:background="#E0E0E0" />
-    </LinearLayout>
-</com.facebook.shimmer.ShimmerFrameLayout>
+                <!-- Text -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="8dp"
+                    android:layout_toEndOf="@id/shim_icon"
+                    android:layout_toStartOf="@id/shim_btn"
+                    android:orientation="vertical">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="14dp"
+                        android:background="@drawable/adore_shimmer_placeholder" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="10dp"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/adore_shimmer_placeholder" />
+
+                    <View
+                        android:layout_width="80dp"
+                        android:layout_height="10dp"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/adore_shimmer_placeholder" />
+                </LinearLayout>
+
+                <!-- CTA -->
+                <View
+                    android:id="@+id/shim_btn"
+                    android:layout_width="100dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/adore_shimmer_placeholder" />
+            </RelativeLayout>
+        </androidx.cardview.widget.CardView>
+    </com.facebook.shimmer.ShimmerFrameLayout>
+</RelativeLayout>
