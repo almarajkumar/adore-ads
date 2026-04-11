@@ -148,15 +148,15 @@ public class AdsMobileAdsManager {
 
             });
 
-            // Optional: set test device IDs
-            new Handler(Looper.getMainLooper()).post(() -> {
-                if (isShowTestAds) {
+            // Optional: set test device IDs (only when explicitly enabled)
+            if (isShowTestAds) {
+                new Handler(Looper.getMainLooper()).post(() -> {
                     RequestConfiguration config = new RequestConfiguration.Builder()
                             .setTestDeviceIds(Collections.singletonList(getDeviceId(context)))
                             .build();
                     MobileAds.setRequestConfiguration(config);
-                }
-            });
+                });
+            }
         }, "AdMob-Init").start();
     }
 
@@ -869,7 +869,11 @@ public class AdsMobileAdsManager {
                     AdType.NATIVE
             );
             VideoOptions videoOptions = (new VideoOptions.Builder()).setStartMuted(true).build();
-            NativeAdOptions adOptions = (new NativeAdOptions.Builder()).setVideoOptions(videoOptions).build();
+            NativeAdOptions adOptions = (new NativeAdOptions.Builder())
+                    .setVideoOptions(videoOptions)
+                    .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
+                    .setRequestCustomMuteThisAd(false)
+                    .build();
             AdLoader adLoader = (new AdLoader.Builder(context, id)).forNativeAd((nativeAd) -> {
                 if (callback != null) {
                     callback.onNativeAds(new ApAdNative(nativeAd));
