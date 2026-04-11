@@ -313,47 +313,55 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
     }
 
     public void showAdIfAvailable() {
-        if(PurchaseManager.getInstance().isPurchased()) {
+        if (PurchaseManager.getInstance().isPurchased()) {
             return;
         }
-        if (this.currentActivity == null || !AdsMobileAdsManager.getInstance().isAdsEnabled()) {
-            Log.d("AppOpenManager", "showAdIfAvailable: " + ProcessLifecycleOwner.get().getLifecycle().getCurrentState());
-            if (!ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(State.STARTED)) {
-                Log.d("AppOpenManager", "showAdIfAvailable: return");
-            } else {
-                if (this.isAdAvailable()) {
-                    Log.d("AppOpenManager", "Will show ad.");
-                    FullScreenContentCallback fullScreenContentCallback = new FullScreenContentCallback() {
-                        public void onAdDismissedFullScreenContent() {
-                            AppOpenAdManager.this.appResumeAd = null;
-                            AppOpenAdManager.this.isShowingAd = false;
-                            AppOpenAdManager.this.dismissDialogLoading();
-                            AppOpenAdManager.this.myApplication.sendBroadcast(new Intent("ACTION_SHOW_NATIVE"));
-                        }
-
-                        public void onAdFailedToShowFullScreenContent(AdError adError) {
-                            AppOpenAdManager.this.dismissDialogLoading();
-                            AppOpenAdManager.this.appResumeAd = null;
-                            AppOpenAdManager.this.myApplication.sendBroadcast(new Intent("ACTION_SHOW_NATIVE"));
-                        }
-
-                        public void onAdShowedFullScreenContent() {
-                            AppOpenAdManager.this.isShowingAd = true;
-                        }
-
-                        @Override
-                        public void onAdClicked() {
-                            super.onAdClicked();
-                            FirebaseAnalyticsEvents.getInstance().logClickAdsEvent(
-                                    currentActivity,
-                                    openAppID
-                            );
-                        }
-                    };
-                    this.showAdsWithLoading(fullScreenContentCallback);
-                }
-
-            }
+        if (this.currentActivity == null) {
+            Log.d("AppOpenManager", "showAdIfAvailable: currentActivity is null");
+            return;
         }
+        if (!AdsMobileAdsManager.getInstance().isAdsEnabled()) {
+            Log.d("AppOpenManager", "showAdIfAvailable: ads disabled");
+            return;
+        }
+        if (!ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(State.STARTED)) {
+            Log.d("AppOpenManager", "showAdIfAvailable: app not in foreground");
+            return;
+        }
+        if (!this.isAdAvailable()) {
+            Log.d("AppOpenManager", "showAdIfAvailable: no ad available, fetching");
+            this.fetchAd();
+            return;
+        }
+
+        Log.d("AppOpenManager", "Will show app open ad");
+        FullScreenContentCallback fullScreenContentCallback = new FullScreenContentCallback() {
+            public void onAdDismissedFullScreenContent() {
+                AppOpenAdManager.this.appResumeAd = null;
+                AppOpenAdManager.this.isShowingAd = false;
+                AppOpenAdManager.this.dismissDialogLoading();
+                AppOpenAdManager.this.myApplication.sendBroadcast(new Intent("ACTION_SHOW_NATIVE"));
+            }
+
+            public void onAdFailedToShowFullScreenContent(AdError adError) {
+                AppOpenAdManager.this.dismissDialogLoading();
+                AppOpenAdManager.this.appResumeAd = null;
+                AppOpenAdManager.this.myApplication.sendBroadcast(new Intent("ACTION_SHOW_NATIVE"));
+            }
+
+            public void onAdShowedFullScreenContent() {
+                AppOpenAdManager.this.isShowingAd = true;
+            }
+
+            @Override
+            public void onAdClicked() {
+                super.onAdClicked();
+                FirebaseAnalyticsEvents.getInstance().logClickAdsEvent(
+                        currentActivity,
+                        openAppID
+                );
+            }
+        };
+        this.showAdsWithLoading(fullScreenContentCallback);
     }
 }
