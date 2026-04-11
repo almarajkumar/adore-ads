@@ -11,6 +11,7 @@ import android.widget.TextView;
 
 import com.adoreapps.ai.ads.AdCallback;
 import com.adoreapps.ai.ads.R;
+import com.adoreapps.ai.ads.core.AppOpenAdManager;
 import com.adoreapps.ai.ads.manager.NativeAdManager;
 import com.adoreapps.ai.ads.settings.AdConstants;
 
@@ -63,6 +64,11 @@ public class FullScreenNativeAdActivity extends Activity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN
         );
+
+        // Prevent app open ad from showing over this activity
+        if (AppOpenAdManager.getInstance().isInitialized()) {
+            AppOpenAdManager.getInstance().disableAppResume();
+        }
 
         // Use the wrapper layout (ad container + overlay countdown/skip)
         setContentView(R.layout.adore_activity_full_screen_native);
@@ -142,6 +148,10 @@ public class FullScreenNativeAdActivity extends Activity {
         super.onDestroy();
         if (countDownTimer != null) {
             countDownTimer.cancel();
+        }
+        // Re-enable app open ads
+        if (AppOpenAdManager.getInstance().isInitialized()) {
+            AppOpenAdManager.getInstance().enableAppResume();
         }
     }
 

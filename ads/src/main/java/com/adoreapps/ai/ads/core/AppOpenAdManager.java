@@ -77,6 +77,9 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
         this.myApplication = application;
         this.myApplication.registerActivityLifecycleCallbacks(this);
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+
+        // Auto-disable app open ads on full-screen ad activities
+        disableLoadAtActivity(com.adoreapps.ai.ads.dialog.FullScreenNativeAdActivity.class);
         if(AdsMobileAdsManager.getInstance().isUseTestAdIds()) {
             this.openAppAdIds = new ArrayList<>();
             this.openAppAdIds.add(com.adoreapps.ai.ads.settings.AdConstants.TEST_APP_OPEN_AD_ID);
