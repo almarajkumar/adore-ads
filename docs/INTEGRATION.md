@@ -40,7 +40,7 @@ In your app's `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'com.adoreapps.ai:ads:1.1.0'
+    implementation 'com.adoreapps.ai:ads:1.2.0'
 }
 ```
 
@@ -181,6 +181,14 @@ AdoreAds.getInstance().nativeAds().load(activity, "NATIVE_HOME", new AdCallback(
 
 // Stop refresh manually (if not using LifecycleOwner)
 AdoreAds.getInstance().nativeAds().stopAutoRefresh("HomeFragment");
+
+// Batch preload multiple placements at once (v1.2.0)
+AdoreAds.getInstance().nativeAds().preloadMultiple(activity,
+    Arrays.asList("NATIVE_HOME", "NATIVE_SETTINGS", "NATIVE_EDIT"));
+
+// Staggered preload (500ms between each — avoids request flooding)
+AdoreAds.getInstance().nativeAds().preloadMultipleStaggered(activity,
+    Arrays.asList("NATIVE_HOME", "NATIVE_SETTINGS"), 500);
 ```
 
 ### Interstitial Ads
@@ -207,9 +215,15 @@ AdoreAds.getInstance().interstitialAds().loadAdWithPriorityIds(
     activity, ids, true, adFinishedCallback
 );
 
-// Control placement flags
-AdoreAds.getInstance().interstitialAds().setShowInterstitialAd(true);
+// Map-based placement flags (v1.2.0)
+AdoreAds.getInstance().interstitialAds().setPlacementFlag("show_inter_home", true);
+boolean enabled = AdoreAds.getInstance().interstitialAds().getPlacementFlag("show_inter_home", true);
+
+// Cooldown persisted to SharedPreferences (survives process death)
 AdoreAds.getInstance().interstitialAds().setCooldownSeconds(45);
+
+// Configurable timeout via remote config (default 60s)
+AdoreAds.getInstance().interstitialAds().setInterstitialTimeoutMs(30000);
 ```
 
 ### Reward Ads
@@ -238,8 +252,7 @@ AdoreAds.getInstance().rewardAds().loadAndShowStickerRewardAd(activity, callback
 AdoreAds.getInstance().rewardAds().loadAndShowStoreRewardAd(activity, callback);
 AdoreAds.getInstance().rewardAds().loadAndShowGenerateRewardAd(activity, callback);
 
-// Control placement flags
-AdoreAds.getInstance().rewardAds().setShowRewardSticker(false);
+// Reward placements are now fully config-driven (no hardcoded switch-case)
 ```
 
 ### Banner Ads
@@ -333,6 +346,7 @@ AdoreAds.getInstance().fetchRemoteConfig(success -> {
 | `adore_interstitial_cooldown` | long | Seconds between interstitial shows |
 | `adore_native_refresh_interval` | long | Native ad auto-refresh interval (seconds) |
 | `adore_native_auto_refresh_enabled` | boolean | Enable/disable native auto-refresh |
+| `adore_interstitial_timeout_ms` | long | Interstitial loading dialog timeout (ms) |
 | `adore_native_{KEY}_enabled` | boolean | Toggle a native placement on/off |
 | `adore_inter_{KEY}_enabled` | boolean | Toggle an interstitial placement |
 | `adore_reward_{KEY}_enabled` | boolean | Toggle a reward placement |
@@ -353,6 +367,12 @@ AdoreAds.getInstance().fetchRemoteConfig(success -> {
 ```
 
 Priority order: `high` > `medium` > `low` > `default`. Only entries with `is_enabled: true` are used. This lets you A/B test individual floors without an app update.
+
+**Configure Adjust event tokens (v1.2.0):**
+```java
+// After AdoreAds.init()
+AdjustEvents.getInstance().setTokens("your_ad_impression_token", "your_purchase_token");
+```
 
 **Manual apply (if you fetch remote config yourself):**
 ```java

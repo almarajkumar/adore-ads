@@ -212,41 +212,56 @@ AD_EXPIRY_MS expiry on all cached ads
 Premium + consent + network validated before serving
 ```
 
-## Interstitial Placement Flags
+## Interstitial Placement Flags (v1.2.0 — Map-Based)
 
-`InterstitialAdManager` exposes placement flags as instance methods:
+Placement flags are stored in a `ConcurrentHashMap` for easy remote config control:
 
 ```java
 InterstitialAdManager mgr = InterstitialAdManager.getInstance();
 
-// Enable/disable global interstitial showing
-mgr.setShowInterstitialAd(true);
+// Set any flag by key (from remote config, settings, etc.)
+mgr.setPlacementFlag("show_inter_home", true);
+mgr.setPlacementFlag("show_inter_onb_1", false);
 
-// Per-placement control
-mgr.setShowInterOnb1(false);
-mgr.setShowInterMenu1(true);
-mgr.setShowInterStore1(true);
-mgr.setShowInterGallery1(true);
-mgr.setShowInterSave1(true);
-mgr.setShowInterHome1(true);
-mgr.setShowInterShareBack(true);
-// ... etc (see full list in InterstitialAdManager.java)
+// Read with default value
+boolean enabled = mgr.getPlacementFlag("show_inter_home", true);
 
-// Configure cooldown between shows
+// Cooldown persisted to SharedPreferences (survives process death)
 mgr.setCooldownSeconds(45);
+
+// Configurable loading dialog timeout (default 60s, override via remote config)
+mgr.setInterstitialTimeoutMs(30000);
 ```
 
-## Reward Placement Flags
+## Reward Placements (v1.2.0 — Config-Driven)
 
-`RewardAdManager` exposes placement flags as instance methods:
+Reward ad ID mapping is now fully driven by `populateFromConfig()` and `addPlacement()`.
+No more hardcoded switch-case for "watermark", "sticker", "store" etc.
 
 ```java
-RewardAdManager mgr = RewardAdManager.getInstance();
+// Register via config builder
+.addRewardPlacement("REWARD_BONUS", new PlacementConfig(
+    Arrays.asList("high_id", "low_id"), true))
 
-mgr.setShowRewardStore1(false);
-mgr.setShowRewardStore2(false);
-mgr.setShowRewardSticker(true);
-mgr.setShowRewardWtm(true);
+// Or add at runtime
+AdoreAds.getInstance().addRewardPlacement("REWARD_UNLOCK", config);
+
+// Load and show by key
+AdoreAds.getInstance().rewardAds().loadAndShowByPlacement(activity, "REWARD_BONUS", callback);
+```
+
+## Batch Preloading (v1.2.0)
+
+Preload multiple native ad placements in one call:
+
+```java
+// Preload all at once
+AdoreAds.getInstance().nativeAds().preloadMultiple(activity,
+    Arrays.asList("NATIVE_HOME", "NATIVE_SETTINGS", "NATIVE_EDIT"));
+
+// Staggered (500ms between each — avoids request flooding)
+AdoreAds.getInstance().nativeAds().preloadMultipleStaggered(activity,
+    Arrays.asList("NATIVE_HOME", "NATIVE_SETTINGS"), 500);
 ```
 
 ## Runtime Placement Management
@@ -334,6 +349,21 @@ BannerAdManager.getInstance().populateAdUnitMap(activity);
 AdoreAds.getInstance().updateConfig(newConfig);
 // Repopulates NativeAdManager, BannerAdManager, and interstitial cooldown
 ```
+
+## Performance Optimizations (v1.2.0)
+
+| Optimization | Impact |
+|---|---|
+| **RemoteConfig activate-first** | Instant cached values (~0ms vs 10-30s blocking) |
+| **Parallel mediation init** (3-thread pool) | 3-8s faster SDK startup |
+| **Shared native pool** (non-consuming `getDefaultNativeAd()`) | Same fallback ad reused across failed placements |
+| **DefaultAdPool depth-2 + retry backoff** | 30s/60s/120s retry; 2 ads cached per type |
+| **10s load timeout** on all ad loads | Prevents stuck placements (AtomicBoolean guard) |
+| **Auto-refresh stagger** (random 0-5s offset) | Prevents thundering herd |
+| **Ad expiry checked at show time** | No dead ads shown |
+| **Persisted interstitial cooldown** (SharedPreferences) | Survives process death |
+| **Fill-rate analytics** | 4 events: request_sent, filled, show_success, show_failed |
+| **Configurable interstitial timeout** | Via remote config key `adore_interstitial_timeout_ms` |
 
 ## Thread Safety
 

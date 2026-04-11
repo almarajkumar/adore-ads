@@ -28,7 +28,7 @@ maven {
 }
 
 // app/build.gradle
-implementation 'com.adoreapps.ai:ads:1.1.0'
+implementation 'com.adoreapps.ai:ads:1.2.0'
 ```
 
 ## Quick Start
