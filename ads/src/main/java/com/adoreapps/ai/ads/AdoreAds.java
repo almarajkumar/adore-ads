@@ -7,6 +7,7 @@ import com.adoreapps.ai.ads.billing.PurchaseManager;
 import com.adoreapps.ai.ads.consent.ConsentManager;
 import com.adoreapps.ai.ads.core.AdsMobileAdsManager;
 import com.adoreapps.ai.ads.core.AppOpenAdManager;
+import com.adoreapps.ai.ads.event.AdjustEvents;
 import com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents;
 import com.adoreapps.ai.ads.manager.BannerAdManager;
 import com.adoreapps.ai.ads.manager.DefaultAdPool;
@@ -93,6 +94,14 @@ public final class AdoreAds {
 
         // Configure Facebook event logging
         FirebaseAnalyticsEvents.getInstance().setFacebookEnabled(config.isFacebookEnabled());
+
+        // Configure Adjust (only enabled when tokens are provided)
+        if (!config.getAdjustEventAdImpression().isEmpty() || !config.getAdjustEventPurchase().isEmpty()) {
+            AdjustEvents.getInstance().setTokens(
+                    config.getAdjustEventAdImpression(),
+                    config.getAdjustEventPurchase()
+            );
+        }
 
         // Configure consent test device hash if provided
         if (!config.getConsentTestDeviceHashedId().isEmpty()) {

@@ -10,6 +10,11 @@
             android:name="com.facebook.ads.AudienceNetworkActivity"
             android:hardwareAccelerated="true"
             android:exported="false" />
+
+        <activity
+            android:name="com.adoreapps.ai.ads.dialog.FullScreenNativeAdActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
     </application>
 
 </manifest>

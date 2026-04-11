@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.facebook.shimmer.ShimmerFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/shimmer_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Icon + title row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="#E0E0E0" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <View
+                    android:layout_width="160dp"
+                    android:layout_height="13dp"
+                    android:background="#E0E0E0" />
+
+                <View
+                    android:layout_width="100dp"
+                    android:layout_height="10dp"
+                    android:layout_marginTop="5dp"
+                    android:background="#EBEBEB" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Media placeholder -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="8dp"
+            android:background="#E8E8E8" />
+
+        <!-- Body placeholder -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="11dp"
+            android:layout_marginTop="10dp"
+            android:background="#EBEBEB" />
+
+        <!-- CTA placeholder -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="10dp"
+            android:background="#E0E0E0" />
+    </LinearLayout>
+</com.facebook.shimmer.ShimmerFrameLayout>

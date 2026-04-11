@@ -99,6 +99,7 @@ public abstract class AdoreAppsAdsApplication extends Application {
             AdjustConfig adjustConfig = new AdjustConfig(this, adjustToken, environment);
             adjustConfig.setLogLevel(com.adjust.sdk.LogLevel.VERBOSE);
             Adjust.initSdk(adjustConfig);
+            com.adoreapps.ai.ads.event.AdjustEvents.getInstance().setEnabled(true);
         }
     }
 

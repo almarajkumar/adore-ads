@@ -48,6 +48,9 @@ public final class AdConstants {
     /** SharedPreferences key for interstitial cooldown end timestamp. */
     public static final String PREF_INTERSTITIAL_COOLDOWN_END = "adore_interstitial_cooldown_end";
 
+    /** Default countdown seconds for full-screen native ad skip button. */
+    public static final int FULL_SCREEN_COUNTDOWN_SECONDS = 5;
+
     // =========================================================
     // TEST AD UNIT IDS (Google-provided sample ads)
     // =========================================================
