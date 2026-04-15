@@ -6,7 +6,9 @@ import com.adoreapps.ai.ads.settings.AdUnitsConfig;
 import com.adoreapps.ai.ads.settings.AdConstants;
 import com.adoreapps.ai.ads.settings.AdSettingsStore;
 import com.adoreapps.ai.ads.settings.AdsConfig;
+import com.adoreapps.ai.ads.settings.BannerSize;
 import com.adoreapps.ai.ads.core.AdsMobileAdsManager;
+import com.google.android.gms.ads.AdSize;
 
 import android.app.Activity;
 import android.view.View;
@@ -25,12 +27,41 @@ import java.util.Map;
 public class BannerAdManager {
 
     private final Map<String, AdUnitsConfig> bannerAdMap = new HashMap<>();
+    private final Map<String, BannerSize> bannerSizeMap = new HashMap<>();
+    private BannerSize defaultBannerSize = BannerSize.ADAPTIVE_LARGE;
+
     public static final String BANNER_SPLASH = "BANNER_SPLASH";
     public static final String BANNER_EDIT = "BANNER_EDIT";
     public static final String BANNER_SETTING = "BANNER_SETTING";
 
     public BannerAdManager() {
 
+    }
+
+    /**
+     * Set the default banner size used for all placements that don't have
+     * a per-placement size override.
+     */
+    public void setDefaultBannerSize(BannerSize size) {
+        if (size != null) this.defaultBannerSize = size;
+    }
+
+    public BannerSize getDefaultBannerSize() {
+        return defaultBannerSize;
+    }
+
+    /**
+     * Set a banner size for a specific placement. Overrides the default size.
+     */
+    public void setBannerSize(String placement, BannerSize size) {
+        if (placement != null && size != null) {
+            bannerSizeMap.put(placement, size);
+        }
+    }
+
+    public BannerSize getBannerSize(String placement) {
+        BannerSize size = bannerSizeMap.get(placement);
+        return size != null ? size : defaultBannerSize;
     }
 
     private static volatile BannerAdManager instance;
@@ -124,16 +155,20 @@ public class BannerAdManager {
         }
     }
 
-    public  void loadAndShowBannerAd(
-            Activity activity,
-            String placement,
-            FrameLayout bannerAdView
-    ) {
-        if(PurchaseManager.getInstance().isPurchased()) {
+    public void loadAndShowBannerAd(Activity activity, String placement, FrameLayout bannerAdView) {
+        loadAndShowBannerAd(activity, placement, bannerAdView, getBannerSize(placement));
+    }
+
+    /**
+     * Load and show a banner ad with a specific size, overriding the placement/default size.
+     */
+    public void loadAndShowBannerAd(Activity activity, String placement,
+                                     FrameLayout bannerAdView, BannerSize size) {
+        if (PurchaseManager.getInstance().isPurchased()) {
             bannerAdView.setVisibility(View.GONE);
             return;
         }
-        if(!ConsentManager.getInstance(activity).canRequestAds()) {
+        if (!ConsentManager.getInstance(activity).canRequestAds()) {
             bannerAdView.setVisibility(View.GONE);
             return;
         }
@@ -151,14 +186,16 @@ public class BannerAdManager {
             }
         }
         if (!bannerAdIds.isEmpty()) {
+            BannerSize finalSize = size != null ? size : defaultBannerSize;
+            AdSize adSize = finalSize.toAdSize(activity);
             AdsMobileAdsManager.getInstance().loadAlternateBanner(
                     activity,
                     bannerAdIds,
-                    bannerAdView
+                    bannerAdView,
+                    adSize
             );
         } else {
             bannerAdView.setVisibility(View.GONE);
         }
-
     }
 }

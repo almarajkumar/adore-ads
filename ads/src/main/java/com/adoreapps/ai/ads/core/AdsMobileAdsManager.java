@@ -623,6 +623,11 @@ public class AdsMobileAdsManager {
     }
 
     public void loadBanner(Activity mActivity, final String id, final FrameLayout adContainer, final AdCallback callback) {
+        loadBanner(mActivity, id, adContainer, null, callback);
+    }
+
+    public void loadBanner(Activity mActivity, final String id, final FrameLayout adContainer,
+                           AdSize customSize, final AdCallback callback) {
         if(PurchaseManager.getInstance().isPurchased()) {
             adContainer.removeAllViews();
             adContainer.setVisibility(View.GONE);
@@ -637,7 +642,7 @@ public class AdsMobileAdsManager {
             try {
                 final AdView adView = new AdView(mActivity);
                 adView.setAdUnitId(id);
-                AdSize adSize = this.getAdSize(mActivity);
+                AdSize adSize = customSize != null ? customSize : this.getAdSize(mActivity);
                 adView.setAdSize(adSize);
                 adView.setLayerType(View.LAYER_TYPE_SOFTWARE, (Paint)null);
                 FirebaseAnalyticsEvents.getInstance().trackAdRequest(
@@ -722,6 +727,11 @@ public class AdsMobileAdsManager {
 
 
     public void loadAlternateBanner(final Activity activity, final List<String> idsInput, final FrameLayout adContainer) {
+        loadAlternateBanner(activity, idsInput, adContainer, null);
+    }
+
+    public void loadAlternateBanner(final Activity activity, final List<String> idsInput,
+                                     final FrameLayout adContainer, final AdSize customSize) {
         if(PurchaseManager.getInstance().isPurchased()) {
             adContainer.removeAllViews();
             adContainer.setVisibility(View.GONE);
@@ -749,14 +759,14 @@ public class AdsMobileAdsManager {
                     bannerId,
                     AdType.BANNER
             );
-            this.loadBanner(activity, bannerId, adContainer, new AdCallback() {
+            this.loadBanner(activity, bannerId, adContainer, customSize, new AdCallback() {
                 public void onAdFailedToLoad(@NonNull ApAdError i) {
                     super.onAdFailedToLoad(i);
                     Log.w("AdmobLogger", "loadAlternateBanner: fail-" + finalBannerId);
                     ids.remove(0);
                     if (!ids.isEmpty()) {
                         adContainer.setVisibility(View.VISIBLE);
-                        loadAlternateBanner(activity, ids, adContainer);
+                        loadAlternateBanner(activity, ids, adContainer, customSize);
                     }
                 }
 
