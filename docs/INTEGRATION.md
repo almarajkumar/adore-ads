@@ -258,9 +258,47 @@ AdoreAds.getInstance().rewardAds().loadAndShowGenerateRewardAd(activity, callbac
 ### Banner Ads
 
 ```java
+// Default size (ADAPTIVE_LARGE)
 AdoreAds.getInstance().bannerAds().loadAndShowBannerAd(
     activity, "BANNER_SETTINGS", bannerFrameLayout
 );
+
+// With specific size
+AdoreAds.getInstance().bannerAds().loadAndShowBannerAd(
+    activity, "BANNER_SETTINGS", bannerFrameLayout, BannerSize.MEDIUM_RECTANGLE
+);
+
+// Set per-placement size (applies to all subsequent loads)
+AdoreAds.getInstance().bannerAds().setBannerSize("BANNER_HOME", BannerSize.LARGE_BANNER);
+
+// Set global default
+AdoreAds.getInstance().bannerAds().setDefaultBannerSize(BannerSize.ADAPTIVE);
+```
+
+**Available sizes:**
+
+| Size | Dimensions | Use Case |
+|------|------------|----------|
+| `BANNER` | 320x50 | Standard banner |
+| `LARGE_BANNER` | 320x100 | Slightly taller standard |
+| `MEDIUM_RECTANGLE` | 300x250 | MREC / in-feed |
+| `FULL_BANNER` | 468x60 | Tablet |
+| `LEADERBOARD` | 728x90 | Tablet top/bottom |
+| `ADAPTIVE` | Full-width, SDK-computed height | Modern standard |
+| `ADAPTIVE_LARGE` | Full-width, larger height (SDK 25+) | Default |
+| `INLINE_ADAPTIVE` | Flexible height for feeds | Scrollable content |
+
+**Priority order when resolving size:**
+1. Size passed to `loadAndShowBannerAd(..., size)` (explicit)
+2. Per-placement size via `setBannerSize(placement, size)`
+3. Global default via `setDefaultBannerSize(size)` or remote config `ad_banner_size`
+4. Library default: `ADAPTIVE_LARGE`
+
+**Remote config override:**
+```
+Key: ad_banner_size
+Type: String
+Values: BANNER | LARGE_BANNER | MEDIUM_RECTANGLE | FULL_BANNER | LEADERBOARD | ADAPTIVE | ADAPTIVE_LARGE | INLINE_ADAPTIVE
 ```
 
 ### App Open Ads
@@ -340,21 +378,38 @@ AdoreAds.getInstance().fetchRemoteConfig(success -> {
 
 **Firebase Console key conventions:**
 
+Key format: `ad_{type}_{position}_{suffix}` where `position` is the lowercase placement key without its type prefix (e.g. `NATIVE_HOME` → `home`).
+
+**Global toggles:**
+
 | Key | Type | Description |
 |-----|------|-------------|
-| `adore_ads_enabled` | boolean | Master kill-switch for all ads |
-| `adore_interstitial_cooldown` | long | Seconds between interstitial shows |
-| `adore_native_refresh_interval` | long | Native ad auto-refresh interval (seconds) |
-| `adore_native_auto_refresh_enabled` | boolean | Enable/disable native auto-refresh |
-| `adore_interstitial_timeout_ms` | long | Interstitial loading dialog timeout (ms) |
-| `adore_native_{KEY}_enabled` | boolean | Toggle a native placement on/off |
-| `adore_inter_{KEY}_enabled` | boolean | Toggle an interstitial placement |
-| `adore_reward_{KEY}_enabled` | boolean | Toggle a reward placement |
-| `adore_banner_{KEY}_enabled` | boolean | Toggle a banner placement |
-| `adore_native_{KEY}_ads` | JSON | Override ad unit IDs for a native placement |
-| `adore_inter_{KEY}_ads` | JSON | Override ad unit IDs for an interstitial placement |
-| `adore_reward_{KEY}_ads` | JSON | Override ad unit IDs for a reward placement |
-| `adore_banner_{KEY}_ads` | JSON | Override ad unit IDs for a banner placement |
+| `ad_enabled` | boolean | Master kill-switch for all ads |
+| `ad_interstitial_cooldown` | long | Seconds between interstitial shows |
+| `ad_interstitial_timeout_ms` | long | Interstitial loading dialog timeout (ms) |
+| `ad_native_refresh_interval` | long | Native ad auto-refresh interval (seconds) |
+| `ad_native_auto_refresh_enabled` | boolean | Enable/disable native auto-refresh |
+| `ad_app_open_enabled` | boolean | Enable/disable app open ads globally |
+| `ad_app_open_ads` | JSON | Override app open ad unit IDs |
+| `ad_banner_size` | string | Default banner size (BANNER, ADAPTIVE, MEDIUM_RECTANGLE, etc.) |
+
+**Per-placement toggles:**
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `ad_native_{position}_enabled` | boolean | Toggle a native placement |
+| `ad_inter_{position}_enabled` | boolean | Toggle an interstitial placement |
+| `ad_reward_{position}_enabled` | boolean | Toggle a reward placement |
+| `ad_banner_{position}_enabled` | boolean | Toggle a banner placement |
+
+**Per-placement ad unit overrides (JSON):**
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `ad_native_{position}_ads` | JSON | Override ad unit IDs for a native placement |
+| `ad_inter_{position}_ads` | JSON | Override ad unit IDs for an interstitial placement |
+| `ad_reward_{position}_ads` | JSON | Override ad unit IDs for a reward placement |
+| `ad_banner_{position}_ads` | JSON | Override ad unit IDs for a banner placement |
 
 **JSON format for ad unit overrides** (set as string value in Firebase Console):
 

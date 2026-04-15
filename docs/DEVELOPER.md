@@ -20,7 +20,7 @@ com.adoreapps.ai.ads/
 │   ├── NativeAdManager.java       <- Auto-refresh, parallel preload, cache, expiry, fallback
 │   ├── InterstitialAdManager.java <- Singleton, cooldown timer, priority waterfall
 │   ├── RewardAdManager.java       <- Singleton, caching, expiry, auto-replenish
-│   ├── BannerAdManager.java       <- Singleton, waterfall + default fallback
+│   ├── BannerAdManager.java       <- Singleton, waterfall + default fallback, configurable size
 │   └── DefaultAdPool.java         <- Global fallback pool (native, interstitial, reward)
 │
 ├── consent/
@@ -249,6 +249,57 @@ AdoreAds.getInstance().addRewardPlacement("REWARD_UNLOCK", config);
 // Load and show by key
 AdoreAds.getInstance().rewardAds().loadAndShowByPlacement(activity, "REWARD_BONUS", callback);
 ```
+
+## Banner Ad Sizes (v1.4.7)
+
+`BannerAdManager` supports configurable sizes via the `BannerSize` enum. Size can be set per-call, per-placement, or globally.
+
+### BannerSize Enum
+
+| Enum | Google SDK equivalent | Dimensions |
+|------|----------------------|------------|
+| `BANNER` | `AdSize.BANNER` | 320x50 |
+| `LARGE_BANNER` | `AdSize.LARGE_BANNER` | 320x100 |
+| `MEDIUM_RECTANGLE` | `AdSize.MEDIUM_RECTANGLE` | 300x250 |
+| `FULL_BANNER` | `AdSize.FULL_BANNER` | 468x60 |
+| `LEADERBOARD` | `AdSize.LEADERBOARD` | 728x90 |
+| `ADAPTIVE` | `getCurrentOrientationAnchoredAdaptiveBannerAdSize` | Screen-width, dynamic height |
+| `ADAPTIVE_LARGE` | `getLargeAnchoredAdaptiveBannerAdSize` (SDK 25+) | Screen-width, larger height (default) |
+| `INLINE_ADAPTIVE` | `getCurrentOrientationInlineAdaptiveBannerAdSize` | Flexible height for feeds |
+
+### API
+
+```java
+// Per-call (highest priority)
+bannerAds().loadAndShowBannerAd(activity, "BANNER_HOME", container, BannerSize.MEDIUM_RECTANGLE);
+
+// Per-placement (applies to all subsequent loads of this placement)
+bannerAds().setBannerSize("BANNER_HOME", BannerSize.LARGE_BANNER);
+BannerSize current = bannerAds().getBannerSize("BANNER_HOME");
+
+// Global default
+bannerAds().setDefaultBannerSize(BannerSize.ADAPTIVE);
+BannerSize globalDefault = bannerAds().getDefaultBannerSize();
+```
+
+### Resolution Order
+
+When `loadAndShowBannerAd()` is called, size is resolved in this priority:
+
+1. Explicit `BannerSize` parameter (per-call)
+2. Per-placement via `setBannerSize(placement, size)`
+3. Global default via `setDefaultBannerSize()` or remote config `ad_banner_size`
+4. Library default: `ADAPTIVE_LARGE`
+
+### Remote Config
+
+```
+Key: ad_banner_size
+Type: String
+Values: BANNER | LARGE_BANNER | MEDIUM_RECTANGLE | FULL_BANNER | LEADERBOARD | ADAPTIVE | ADAPTIVE_LARGE | INLINE_ADAPTIVE
+```
+
+The string is case-insensitive and applied to `setDefaultBannerSize()` on `applyRemoteConfig()`.
 
 ## Batch Preloading (v1.2.0)
 
