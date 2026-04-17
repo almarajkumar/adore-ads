@@ -35,6 +35,8 @@ public class AdoreAdsConfig {
     private final boolean showLoadingDialog;
     private final @RawRes int loadingAnimationRes;
     private final boolean nativeAutoRefreshEnabled;
+    private final boolean testDeviceMode;
+    private final List<String> testDeviceIds;
 
     // Facebook
     private final boolean facebookEnabled;
@@ -86,6 +88,8 @@ public class AdoreAdsConfig {
         this.showLoadingDialog = builder.showLoadingDialog;
         this.loadingAnimationRes = builder.loadingAnimationRes;
         this.nativeAutoRefreshEnabled = builder.nativeAutoRefreshEnabled;
+        this.testDeviceMode = builder.testDeviceMode;
+        this.testDeviceIds = builder.testDeviceIds;
         this.facebookEnabled = builder.facebookEnabled;
         this.remoteConfigEnabled = builder.remoteConfigEnabled;
         this.remoteConfigDefaultsResId = builder.remoteConfigDefaultsResId;
@@ -120,6 +124,8 @@ public class AdoreAdsConfig {
     public boolean isShowLoadingDialog() { return showLoadingDialog; }
     public @RawRes int getLoadingAnimationRes() { return loadingAnimationRes; }
     public boolean isNativeAutoRefreshEnabled() { return nativeAutoRefreshEnabled; }
+    public boolean isTestDeviceMode() { return testDeviceMode; }
+    public List<String> getTestDeviceIds() { return testDeviceIds; }
 
     public boolean isFacebookEnabled() { return facebookEnabled; }
 
@@ -173,6 +179,8 @@ public class AdoreAdsConfig {
         private boolean showLoadingDialog = true;
         private @RawRes int loadingAnimationRes = 0;
         private boolean nativeAutoRefreshEnabled = true;
+        private boolean testDeviceMode = false;
+        private List<String> testDeviceIds = new ArrayList<>();
 
         private boolean facebookEnabled = true;
 
@@ -219,6 +227,31 @@ public class AdoreAdsConfig {
         public Builder setShowLoadingDialog(boolean show) { this.showLoadingDialog = show; return this; }
         public Builder setLoadingAnimationRes(@RawRes int res) { this.loadingAnimationRes = res; return this; }
         public Builder setNativeAutoRefreshEnabled(boolean enabled) { this.nativeAutoRefreshEnabled = enabled; return this; }
+
+        /**
+         * Enable test device mode. When enabled, the current device is registered
+         * as a test device — real ad layouts load with a "Test Ad" tag overlay.
+         * Use your actual production ad unit IDs with this mode.
+         */
+        public Builder setTestDeviceMode(boolean enabled) { this.testDeviceMode = enabled; return this; }
+
+        /**
+         * Add specific test device IDs (hashed). These devices will see live ads
+         * with a "Test Ad" banner. Find your device ID in logcat:
+         * "Use RequestConfiguration.Builder().setTestDeviceIds(Arrays.asList("XXXXX"))"
+         */
+        public Builder setTestDeviceIds(List<String> ids) {
+            this.testDeviceIds = ids != null ? new ArrayList<>(ids) : new ArrayList<>();
+            return this;
+        }
+
+        /**
+         * Add a single test device ID.
+         */
+        public Builder addTestDeviceId(String id) {
+            if (id != null && !id.isEmpty()) this.testDeviceIds.add(id);
+            return this;
+        }
 
         // Facebook (SDK init + event logging — default true)
         public Builder setFacebookEnabled(boolean enabled) { this.facebookEnabled = enabled; return this; }

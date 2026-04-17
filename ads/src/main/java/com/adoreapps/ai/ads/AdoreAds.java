@@ -88,6 +88,13 @@ public final class AdoreAds {
         coreManager.setAdsEnabled(config.isAdsEnabled());
         coreManager.setShowLoadingDialog(config.isShowLoadingDialog());
         coreManager.setFacebookEnabled(config.isFacebookEnabled());
+        if (config.isTestDeviceMode() || !config.getTestDeviceIds().isEmpty()) {
+            coreManager.setTestDeviceIds(
+                    config.getTestDeviceIds(),
+                    config.isTestDeviceMode(),
+                    application
+            );
+        }
         coreManager.init(application, () -> {
             Log.i(TAG, "AdMob SDK initialized");
         });

@@ -98,6 +98,7 @@ public class AdsMobileAdsManager {
     private boolean isUseTestAdIds = false;
     private boolean facebookEnabled = true;
     private boolean hasLog = true;
+    private List<String> testDeviceIds = new ArrayList<>();
 
 
     private final LoadAdError errAd = new LoadAdError(2, "No Ad", "", (AdError)null, (ResponseInfo)null);
@@ -148,14 +149,13 @@ public class AdsMobileAdsManager {
 
             });
 
-            // Optional: set test device IDs (only when explicitly enabled)
-            if (isShowTestAds) {
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    RequestConfiguration config = new RequestConfiguration.Builder()
-                            .setTestDeviceIds(Collections.singletonList(getDeviceId(context)))
-                            .build();
-                    MobileAds.setRequestConfiguration(config);
-                });
+            // Apply test device IDs if configured
+            if (!testDeviceIds.isEmpty()) {
+                applyTestDeviceConfig();
+            } else if (isShowTestAds) {
+                // Legacy: auto-detect current device
+                testDeviceIds.add(getDeviceId(context));
+                applyTestDeviceConfig();
             }
         }, "AdMob-Init").start();
     }
@@ -315,6 +315,34 @@ public class AdsMobileAdsManager {
 
     public boolean isFacebookEnabled() {
         return facebookEnabled;
+    }
+
+    /**
+     * Register test device IDs. These devices see live ads with a "Test Ad" tag.
+     * Also adds the current device if autoDetect is true.
+     */
+    public void setTestDeviceIds(List<String> ids, boolean autoDetectCurrentDevice, Context context) {
+        this.testDeviceIds = new ArrayList<>();
+        if (ids != null) this.testDeviceIds.addAll(ids);
+        if (autoDetectCurrentDevice && context != null) {
+            String currentDeviceId = getDeviceId(context);
+            if (!this.testDeviceIds.contains(currentDeviceId)) {
+                this.testDeviceIds.add(currentDeviceId);
+            }
+        }
+        applyTestDeviceConfig();
+    }
+
+    private void applyTestDeviceConfig() {
+        if (!testDeviceIds.isEmpty()) {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                RequestConfiguration config = new RequestConfiguration.Builder()
+                        .setTestDeviceIds(testDeviceIds)
+                        .build();
+                MobileAds.setRequestConfiguration(config);
+                Log.i("AdInit", "Test devices registered: " + testDeviceIds.size());
+            });
+        }
     }
 
 
