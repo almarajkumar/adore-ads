@@ -37,7 +37,7 @@ afterEvaluate {
                 from components.findByName("release")
                 groupId = 'com.adoreapps.ai'
                 artifactId = 'ads'
-                version = '1.4.8'
+                version = '1.4.9'
 
                 pom {
                     name = 'Adore Ads'

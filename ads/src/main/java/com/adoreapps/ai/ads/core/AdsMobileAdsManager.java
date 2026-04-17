@@ -149,12 +149,8 @@ public class AdsMobileAdsManager {
 
             });
 
-            // Apply test device IDs if configured
+            // Apply test device IDs if already configured
             if (!testDeviceIds.isEmpty()) {
-                applyTestDeviceConfig();
-            } else if (isShowTestAds) {
-                // Legacy: auto-detect current device
-                testDeviceIds.add(getDeviceId(context));
                 applyTestDeviceConfig();
             }
         }, "AdMob-Init").start();
@@ -319,18 +315,44 @@ public class AdsMobileAdsManager {
 
     /**
      * Register test device IDs. These devices see live ads with a "Test Ad" tag.
-     * Also adds the current device if autoDetect is true.
+     *
+     * When autoDetectCurrentDevice is true, the device's advertising ID hash
+     * is computed and registered. The hash is also logged so you can share it
+     * with team members.
+     *
+     * Important: AdMob uses MD5 of the Advertising ID (not android_id).
+     * Check logcat for: "Use RequestConfiguration.Builder().setTestDeviceIds(...)"
      */
     public void setTestDeviceIds(List<String> ids, boolean autoDetectCurrentDevice, Context context) {
         this.testDeviceIds = new ArrayList<>();
         if (ids != null) this.testDeviceIds.addAll(ids);
         if (autoDetectCurrentDevice && context != null) {
-            String currentDeviceId = getDeviceId(context);
-            if (!this.testDeviceIds.contains(currentDeviceId)) {
-                this.testDeviceIds.add(currentDeviceId);
-            }
+            // Get advertising ID hash on background thread
+            new Thread(() -> {
+                try {
+                    com.google.android.gms.ads.identifier.AdvertisingIdClient.Info adInfo =
+                            com.google.android.gms.ads.identifier.AdvertisingIdClient.getAdvertisingIdInfo(context);
+                    String advertisingId = adInfo.getId();
+                    if (advertisingId != null) {
+                        String hashedId = md5(advertisingId).toUpperCase();
+                        if (!testDeviceIds.contains(hashedId)) {
+                            testDeviceIds.add(hashedId);
+                        }
+                        Log.i("AdInit", "Test device ID (add to config): " + hashedId);
+                    }
+                } catch (Exception e) {
+                    // Fallback: use android_id hash
+                    String fallbackId = getDeviceId(context);
+                    if (!testDeviceIds.contains(fallbackId)) {
+                        testDeviceIds.add(fallbackId);
+                    }
+                    Log.w("AdInit", "Using fallback device ID: " + fallbackId);
+                }
+                applyTestDeviceConfig();
+            }).start();
+        } else {
+            applyTestDeviceConfig();
         }
-        applyTestDeviceConfig();
     }
 
     private void applyTestDeviceConfig() {
@@ -340,7 +362,8 @@ public class AdsMobileAdsManager {
                         .setTestDeviceIds(testDeviceIds)
                         .build();
                 MobileAds.setRequestConfiguration(config);
-                Log.i("AdInit", "Test devices registered: " + testDeviceIds.size());
+                Log.i("AdInit", "Test devices registered: " + testDeviceIds.size()
+                        + " IDs: " + testDeviceIds);
             });
         }
     }
