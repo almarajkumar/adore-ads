@@ -83,15 +83,28 @@ public final class AdoreAds {
                 + " | interstitialPlacements=" + config.getInterstitialPlacements().size());
 
         // Initialize core ad SDK
+        boolean isDebugBuild = (application.getApplicationInfo().flags
+                & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+
         AdsMobileAdsManager coreManager = AdsMobileAdsManager.getInstance();
-        coreManager.setUseTestAdIds(config.isUseTestAdIds());
+        // Test ad IDs only allowed in debug builds — silently ignored in release
+        boolean useTestIds = config.isUseTestAdIds() && isDebugBuild;
+        if (config.isUseTestAdIds() && !isDebugBuild) {
+            Log.w(TAG, "setUseTestAdIds(true) ignored — not a debug build");
+        }
+        coreManager.setUseTestAdIds(useTestIds);
         coreManager.setAdsEnabled(config.isAdsEnabled());
         coreManager.setShowLoadingDialog(config.isShowLoadingDialog());
         coreManager.setFacebookEnabled(config.isFacebookEnabled());
-        if (config.isTestDeviceMode() || !config.getTestDeviceIds().isEmpty()) {
+        // Test device mode only in debug builds
+        boolean testDeviceMode = config.isTestDeviceMode() && isDebugBuild;
+        if (config.isTestDeviceMode() && !isDebugBuild) {
+            Log.w(TAG, "setTestDeviceMode(true) ignored — not a debug build");
+        }
+        if (testDeviceMode || !config.getTestDeviceIds().isEmpty()) {
             coreManager.setTestDeviceIds(
                     config.getTestDeviceIds(),
-                    config.isTestDeviceMode(),
+                    testDeviceMode,
                     application
             );
         }
