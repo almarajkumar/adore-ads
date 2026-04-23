@@ -37,3 +37,6 @@ Thumbs.db
 
 # Maven publish local
 repo/
+
+# Firebase config — dev-only, should not be committed
+sampleapp/google-services.json

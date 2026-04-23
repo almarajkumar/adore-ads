@@ -19,3 +19,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "adore-ads"
 include ':ads'
+include ':sampleapp'

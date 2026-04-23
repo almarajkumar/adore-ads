@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<defaultsMap>
+
+    <!-- ============================================ -->
+    <!-- GLOBAL TOGGLES                               -->
+    <!-- ============================================ -->
+    <entry>
+        <key>ad_enabled</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>ad_interstitial_cooldown</key>
+        <value>30</value>
+    </entry>
+    <entry>
+        <key>ad_interstitial_timeout_ms</key>
+        <value>60000</value>
+    </entry>
+    <entry>
+        <key>ad_native_refresh_interval</key>
+        <value>20</value>
+    </entry>
+    <entry>
+        <key>ad_native_auto_refresh_enabled</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>ad_app_open_enabled</key>
+        <value>true</value>
+    </entry>
+
+    <!-- ============================================ -->
+    <!-- NATIVE PLACEMENTS                            -->
+    <!-- Key format: ad_native_{position}_enabled     -->
+    <!-- Position = placement key without prefix,     -->
+    <!--   lowercase. NATIVE_HOME -> home             -->
+    <!-- ============================================ -->
+    <entry>
+        <key>ad_native_splash_enabled</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>ad_native_home_enabled</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>ad_native_settings_enabled</key>
+        <value>true</value>
+    </entry>
+
+    <!-- ============================================ -->
+    <!-- INTERSTITIAL PLACEMENTS                      -->
+    <!-- Key format: ad_inter_{position}_enabled      -->
+    <!-- ============================================ -->
+    <entry>
+        <key>ad_inter_home_enabled</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>ad_inter_save_enabled</key>
+        <value>true</value>
+    </entry>
+
+    <!-- ============================================ -->
+    <!-- REWARD PLACEMENTS                            -->
+    <!-- Key format: ad_reward_{position}_enabled     -->
+    <!-- ============================================ -->
+    <entry>
+        <key>ad_reward_bonus_enabled</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>ad_reward_unlock_enabled</key>
+        <value>true</value>
+    </entry>
+
+    <!-- ============================================ -->
+    <!-- BANNER PLACEMENTS                            -->
+    <!-- Key format: ad_banner_{position}_enabled     -->
+    <!-- ============================================ -->
+    <entry>
+        <key>ad_banner_home_enabled</key>
+        <value>true</value>
+    </entry>
+
+
+</defaultsMap>
