@@ -115,6 +115,7 @@ public class NativeAdManager {
     // =========================================================
 
     private final Map<String, AdUnitsConfig> nativeAdMap = new ConcurrentHashMap<>();
+    private final Map<String, PlacementConfig> placementConfigMap = new ConcurrentHashMap<>();
     private final Map<String, AdsResponse<NativeAd>> preloadedAds = new ConcurrentHashMap<>();
     private final Map<String, Long> adLoadTimestamps = new ConcurrentHashMap<>();
     private final Map<String, AdStatus> adStatusMap = new ConcurrentHashMap<>();
@@ -319,6 +320,7 @@ public class NativeAdManager {
      */
     public void populateFromConfig(AdoreAdsConfig config) {
         nativeAdMap.clear();
+        placementConfigMap.clear();
         for (Map.Entry<String, PlacementConfig> entry : config.getNativePlacements().entrySet()) {
             PlacementConfig pc = entry.getValue();
             if (pc.isEnabled() && !pc.getAdUnitIds().isEmpty()) {
@@ -327,6 +329,7 @@ public class NativeAdManager {
                         pc.getViewEventName(),
                         pc.getClickEventName()
                 ));
+                placementConfigMap.put(entry.getKey(), pc);
             }
         }
     }
@@ -347,6 +350,7 @@ public class NativeAdManager {
                     config.getViewEventName(),
                     config.getClickEventName()
             ));
+            placementConfigMap.put(key, config);
         }
     }
 
@@ -357,6 +361,7 @@ public class NativeAdManager {
         if (key == null) return;
         clear(key);
         nativeAdMap.remove(key);
+        placementConfigMap.remove(key);
         stopAutoRefresh(key);
     }
 
@@ -790,6 +795,260 @@ public class NativeAdManager {
         autoRefreshPlacements.clear();
         stopGlobalRefresh();
         Log.d(TAG, "Stopped ALL auto-refresh");
+    }
+
+    // =========================================================
+    // NATIVE AD CAROUSEL (v1.5.2)
+    // =========================================================
+
+    private final Map<String, CarouselSession> activeCarousels = new ConcurrentHashMap<>();
+
+    private static class CarouselSession {
+        final java.lang.ref.WeakReference<android.app.Activity> activityRef;
+        final java.lang.ref.WeakReference<FrameLayout> containerRef;
+        final String placementKey;
+        final int adLayoutId;
+        final NativeAdCarouselAdapter adapter;
+        final androidx.viewpager2.widget.ViewPager2 pager;
+        final long slideIntervalMs;
+        final Handler slideHandler;
+        private final Runnable slideRunnable;
+        boolean isSliding = false;
+
+        CarouselSession(android.app.Activity activity, FrameLayout container, String placementKey,
+                        int adLayoutId, NativeAdCarouselAdapter adapter,
+                        androidx.viewpager2.widget.ViewPager2 pager, long slideIntervalMs) {
+            this.activityRef = new java.lang.ref.WeakReference<>(activity);
+            this.containerRef = new java.lang.ref.WeakReference<>(container);
+            this.placementKey = placementKey;
+            this.adLayoutId = adLayoutId;
+            this.adapter = adapter;
+            this.pager = pager;
+            this.slideIntervalMs = slideIntervalMs;
+            this.slideHandler = new Handler(Looper.getMainLooper());
+            this.slideRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (adapter.getItemCount() == 0) return;
+                    int next = (pager.getCurrentItem() + 1) % adapter.getItemCount();
+                    pager.setCurrentItem(next, true);
+                    slideHandler.postDelayed(this, slideIntervalMs);
+                }
+            };
+        }
+
+        void startSliding() {
+            if (isSliding || adapter.getItemCount() <= 1) return;
+            isSliding = true;
+            slideHandler.postDelayed(slideRunnable, slideIntervalMs);
+        }
+
+        void stopSliding() {
+            isSliding = false;
+            slideHandler.removeCallbacks(slideRunnable);
+        }
+    }
+
+    /**
+     * Show a native ad carousel in the given FrameLayout.
+     * <p>
+     * All ad unit IDs registered for this placement are loaded in parallel and shown
+     * as a swipeable carousel. The carousel auto-slides every
+     * {@link PlacementConfig#getCarouselSlideIntervalSeconds()} seconds.
+     * <p>
+     * The ads are also auto-refreshed at the global native refresh interval — on refresh,
+     * all ads reload in parallel and the carousel is repopulated.
+     *
+     * @param activity       host activity
+     * @param container      FrameLayout where the carousel will be inflated
+     * @param adLayoutId     layout resource for each ad page (e.g. {@code AdoreLayouts.NATIVE_LARGE})
+     * @param placementKey   placement key registered via {@code addNativePlacement()}
+     * @param tag            unique tag for auto-refresh tracking (e.g. "HomeFragment")
+     * @param lifecycleOwner optional LifecycleOwner — auto-stops carousel on destroy
+     */
+    public void showCarousel(final android.app.Activity activity,
+                              final FrameLayout container,
+                              @androidx.annotation.LayoutRes final int adLayoutId,
+                              final String placementKey,
+                              final String tag,
+                              @androidx.annotation.Nullable androidx.lifecycle.LifecycleOwner lifecycleOwner) {
+        if (activity == null || container == null || placementKey == null) return;
+        if (PurchaseManager.getInstance().isPurchased()) {
+            container.setVisibility(View.GONE);
+            return;
+        }
+        AdUnitsConfig config = nativeAdMap.get(placementKey);
+        if (config == null || config.adUnitIds.isEmpty()) {
+            container.setVisibility(View.GONE);
+            return;
+        }
+        if (!ConsentManager.getInstance(activity).canRequestAds()
+                || !NetworkUtils.isNetworkAvailable(activity)) {
+            container.setVisibility(View.GONE);
+            return;
+        }
+
+        // Stop existing carousel for this tag
+        stopCarousel(tag);
+
+        // Inflate the carousel layout into the container
+        container.removeAllViews();
+        View carouselRoot = android.view.LayoutInflater.from(activity)
+                .inflate(com.adoreapps.ai.ads.R.layout.adore_native_carousel, container, false);
+        container.addView(carouselRoot);
+
+        androidx.viewpager2.widget.ViewPager2 pager =
+                carouselRoot.findViewById(com.adoreapps.ai.ads.R.id.ad_carousel_pager);
+        NativeAdCarouselAdapter adapter = new NativeAdCarouselAdapter(adLayoutId);
+        pager.setAdapter(adapter);
+
+        // Resolve slide interval from PlacementConfig
+        PlacementConfig pc = placementConfigMap.get(placementKey);
+        long slideIntervalMs = (pc != null ? pc.getCarouselSlideIntervalSeconds() : 5) * 1000L;
+
+        final CarouselSession session = new CarouselSession(activity, container, placementKey,
+                adLayoutId, adapter, pager, slideIntervalMs);
+        activeCarousels.put(tag, session);
+
+        // Load all ads in parallel
+        loadCarouselAds(activity, placementKey, config.adUnitIds, adapter, session);
+
+        // Auto-stop on lifecycle destroy
+        if (lifecycleOwner != null) {
+            lifecycleOwner.getLifecycle().addObserver(new androidx.lifecycle.DefaultLifecycleObserver() {
+                @Override
+                public void onDestroy(@androidx.annotation.NonNull androidx.lifecycle.LifecycleOwner owner) {
+                    stopCarousel(tag);
+                    owner.getLifecycle().removeObserver(this);
+                }
+            });
+        }
+        Log.d(TAG, "Carousel started: " + tag + " [" + placementKey + "] slideMs=" + slideIntervalMs);
+    }
+
+    /**
+     * Load all ad IDs in parallel, populate the adapter as each loads.
+     */
+    private void loadCarouselAds(android.app.Activity activity, String placementKey,
+                                  List<String> adIds, NativeAdCarouselAdapter adapter,
+                                  CarouselSession session) {
+        final List<NativeAd> loaded = new ArrayList<>();
+        final int total = adIds.size();
+        final int[] remaining = {total};
+
+        for (String adId : adIds) {
+            String loadId = AdsMobileAdsManager.getInstance().isUseTestAdIds()
+                    ? AdConstants.TEST_NATIVE_AD_ID : adId;
+
+            AdsMobileAdsManager.getInstance().loadUnifiedNativeAd(activity, loadId, new AdCallback() {
+                @Override
+                public void onNativeAds(ApAdNative nativeAd) {
+                    super.onNativeAds(nativeAd);
+                    synchronized (loaded) {
+                        if (nativeAd != null && nativeAd.getNativeAd() != null) {
+                            loaded.add(nativeAd.getNativeAd());
+                        }
+                        remaining[0]--;
+                        if (remaining[0] == 0 || loaded.size() == 1) {
+                            // First ad or all settled — update adapter
+                            android.app.Activity act = session.activityRef.get();
+                            FrameLayout c = session.containerRef.get();
+                            if (act == null || c == null || act.isFinishing() || act.isDestroyed()) {
+                                // Activity gone — destroy loaded ads
+                                for (NativeAd a : loaded) {
+                                    try { a.destroy(); } catch (Exception ignored) {}
+                                }
+                                loaded.clear();
+                                return;
+                            }
+                            act.runOnUiThread(() -> {
+                                adapter.setAds(new ArrayList<>(loaded));
+                                if (remaining[0] == 0) {
+                                    session.startSliding();
+                                    registerCarouselRefresh(session);
+                                }
+                            });
+                        }
+                    }
+                }
+
+                @Override
+                public void onAdFailedToLoad(@androidx.annotation.NonNull ApAdError error) {
+                    super.onAdFailedToLoad(error);
+                    synchronized (loaded) {
+                        remaining[0]--;
+                        if (remaining[0] == 0) {
+                            android.app.Activity act = session.activityRef.get();
+                            FrameLayout c = session.containerRef.get();
+                            if (act == null || c == null) return;
+                            act.runOnUiThread(() -> {
+                                if (loaded.isEmpty()) {
+                                    // All failed — hide container
+                                    c.setVisibility(View.GONE);
+                                } else {
+                                    adapter.setAds(new ArrayList<>(loaded));
+                                    session.startSliding();
+                                    registerCarouselRefresh(session);
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Register the carousel with its own auto-refresh timer.
+     * On each tick, all ads in the carousel reload in parallel.
+     */
+    private void registerCarouselRefresh(final CarouselSession session) {
+        if (!autoRefreshEnabled) return;
+        long refreshMs = getRefreshInterval() * 1000L;
+        if (refreshMs < MIN_REFRESH_INTERVAL * 1000L) return;
+
+        Runnable refreshTask = new Runnable() {
+            @Override
+            public void run() {
+                android.app.Activity act = session.activityRef.get();
+                FrameLayout c = session.containerRef.get();
+                if (act == null || c == null || act.isFinishing() || act.isDestroyed()
+                        || !c.isAttachedToWindow()) {
+                    return; // Stop refreshing
+                }
+                AdUnitsConfig cfg = nativeAdMap.get(session.placementKey);
+                if (cfg == null || cfg.adUnitIds.isEmpty()) return;
+                Log.d(TAG, "Refreshing carousel: " + session.placementKey);
+                loadCarouselAds(act, session.placementKey, cfg.adUnitIds, session.adapter, session);
+                // Schedule next refresh
+                session.slideHandler.postDelayed(this, refreshMs);
+            }
+        };
+        session.slideHandler.postDelayed(refreshTask, refreshMs);
+    }
+
+    /**
+     * Stop a running carousel and release its ads.
+     */
+    public void stopCarousel(String tag) {
+        if (tag == null) return;
+        CarouselSession session = activeCarousels.remove(tag);
+        if (session != null) {
+            session.stopSliding();
+            // Cancel all scheduled refresh tasks on this handler
+            session.slideHandler.removeCallbacksAndMessages(null);
+            session.adapter.destroy();
+            Log.d(TAG, "Carousel stopped: " + tag);
+        }
+    }
+
+    /**
+     * Stop all running carousels.
+     */
+    public void stopAllCarousels() {
+        for (String tag : new ArrayList<>(activeCarousels.keySet())) {
+            stopCarousel(tag);
+        }
     }
 
     private long getRefreshInterval() {

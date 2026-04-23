@@ -35,6 +35,9 @@ public class PlacementConfig {
     private String backupNativePlacementKey = "";
     private int backupCountdownSeconds = 5;
 
+    // v1.5.2 — native ad carousel (slides through multiple ads)
+    private int carouselSlideIntervalSeconds = 5;
+
     public PlacementConfig(List<String> adUnitIds, boolean enabled,
                            String viewEventName, String clickEventName) {
         this.adUnitIds = adUnitIds != null ? new ArrayList<>(adUnitIds) : new ArrayList<>();
@@ -59,6 +62,7 @@ public class PlacementConfig {
         this.loadMode = b.loadMode != null ? b.loadMode : LoadMode.WATERFALL;
         this.backupNativePlacementKey = b.backupNativePlacementKey != null ? b.backupNativePlacementKey : "";
         this.backupCountdownSeconds = b.backupCountdownSeconds;
+        this.carouselSlideIntervalSeconds = b.carouselSlideIntervalSeconds;
     }
 
     // =========================================================
@@ -72,6 +76,7 @@ public class PlacementConfig {
     public LoadMode getLoadMode() { return loadMode; }
     public String getBackupNativePlacementKey() { return backupNativePlacementKey; }
     public int getBackupCountdownSeconds() { return backupCountdownSeconds; }
+    public int getCarouselSlideIntervalSeconds() { return carouselSlideIntervalSeconds; }
 
     public boolean hasBackupNative() {
         return backupNativePlacementKey != null && !backupNativePlacementKey.isEmpty();
@@ -85,6 +90,7 @@ public class PlacementConfig {
     public void setLoadMode(LoadMode loadMode) { this.loadMode = loadMode != null ? loadMode : LoadMode.WATERFALL; }
     public void setBackupNativePlacementKey(String key) { this.backupNativePlacementKey = key != null ? key : ""; }
     public void setBackupCountdownSeconds(int seconds) { this.backupCountdownSeconds = Math.max(0, seconds); }
+    public void setCarouselSlideIntervalSeconds(int seconds) { this.carouselSlideIntervalSeconds = Math.max(1, seconds); }
 
     /**
      * Replace the ad unit IDs list (e.g. from remote config override).
@@ -108,6 +114,7 @@ public class PlacementConfig {
         private LoadMode loadMode = LoadMode.WATERFALL;
         private String backupNativePlacementKey = "";
         private int backupCountdownSeconds = 5;
+        private int carouselSlideIntervalSeconds = 5;
 
         public Builder setAdUnitIds(List<String> ids) {
             this.adUnitIds = ids != null ? new ArrayList<>(ids) : new ArrayList<>();
@@ -119,6 +126,7 @@ public class PlacementConfig {
         public Builder setLoadMode(LoadMode mode) { this.loadMode = mode; return this; }
         public Builder setBackupNativePlacementKey(String key) { this.backupNativePlacementKey = key; return this; }
         public Builder setBackupCountdownSeconds(int seconds) { this.backupCountdownSeconds = seconds; return this; }
+        public Builder setCarouselSlideIntervalSeconds(int seconds) { this.carouselSlideIntervalSeconds = Math.max(1, seconds); return this; }
 
         public PlacementConfig build() {
             return new PlacementConfig(this);

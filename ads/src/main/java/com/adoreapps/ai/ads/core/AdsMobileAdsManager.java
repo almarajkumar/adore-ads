@@ -987,6 +987,18 @@ public class AdsMobileAdsManager {
         placeHolder.addView(nativeAdView);
     }
 
+    /**
+     * Inflate a native ad layout and bind a NativeAd into it. Returns the
+     * NativeAdView ready to be attached to a parent. Used by carousel adapters.
+     */
+    public NativeAdView inflateAndBindNativeAd(Context context, NativeAd nativeAd, @LayoutRes int layoutId) {
+        View nativeView = LayoutInflater.from(context).inflate(layoutId, null);
+        NativeAdView nativeAdView = new NativeAdView(context);
+        nativeAdView.addView(nativeView);
+        this.onBindAdView(nativeAd, nativeAdView);
+        return nativeAdView;
+    }
+
 
 
 
