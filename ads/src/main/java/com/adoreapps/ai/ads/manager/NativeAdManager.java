@@ -949,26 +949,34 @@ public class NativeAdManager {
                             loaded.add(nativeAd.getNativeAd());
                         }
                         remaining[0]--;
-                        if (remaining[0] == 0 || loaded.size() == 1) {
-                            // First ad or all settled — update adapter
-                            android.app.Activity act = session.activityRef.get();
-                            FrameLayout c = session.containerRef.get();
-                            if (act == null || c == null || act.isFinishing() || act.isDestroyed()) {
-                                // Activity gone — destroy loaded ads
-                                for (NativeAd a : loaded) {
-                                    try { a.destroy(); } catch (Exception ignored) {}
-                                }
-                                loaded.clear();
-                                return;
+                        Log.d(TAG, "Carousel ad loaded for " + placementKey
+                                + " (" + loaded.size() + " loaded, " + remaining[0] + " remaining)");
+                        final boolean allDone = remaining[0] == 0;
+                        final List<NativeAd> snapshot = new ArrayList<>(loaded);
+
+                        android.app.Activity act = session.activityRef.get();
+                        FrameLayout c = session.containerRef.get();
+                        if (act == null || c == null || act.isFinishing() || act.isDestroyed()) {
+                            for (NativeAd a : loaded) {
+                                try { a.destroy(); } catch (Exception ignored) {}
                             }
-                            act.runOnUiThread(() -> {
-                                adapter.setAds(new ArrayList<>(loaded));
-                                if (remaining[0] == 0) {
-                                    session.startSliding();
-                                    registerCarouselRefresh(session);
-                                }
-                            });
+                            loaded.clear();
+                            return;
                         }
+                        // Update adapter after every ad arrives (so user sees progress)
+                        act.runOnUiThread(() -> {
+                            adapter.setAds(snapshot);
+                            if (snapshot.size() == 1 && !session.isSliding) {
+                                session.startSliding();
+                            } else if (session.isSliding) {
+                                // Restart slider so it uses new count
+                                session.stopSliding();
+                                session.startSliding();
+                            }
+                            if (allDone) {
+                                registerCarouselRefresh(session);
+                            }
+                        });
                     }
                 }
 
@@ -977,17 +985,19 @@ public class NativeAdManager {
                     super.onAdFailedToLoad(error);
                     synchronized (loaded) {
                         remaining[0]--;
+                        Log.w(TAG, "Carousel ad failed for " + placementKey
+                                + " (" + loaded.size() + " loaded, " + remaining[0] + " remaining)");
                         if (remaining[0] == 0) {
                             android.app.Activity act = session.activityRef.get();
                             FrameLayout c = session.containerRef.get();
                             if (act == null || c == null) return;
+                            final List<NativeAd> snapshot = new ArrayList<>(loaded);
                             act.runOnUiThread(() -> {
-                                if (loaded.isEmpty()) {
-                                    // All failed — hide container
+                                if (snapshot.isEmpty()) {
                                     c.setVisibility(View.GONE);
                                 } else {
-                                    adapter.setAds(new ArrayList<>(loaded));
-                                    session.startSliding();
+                                    adapter.setAds(snapshot);
+                                    if (!session.isSliding) session.startSliding();
                                     registerCarouselRefresh(session);
                                 }
                             });

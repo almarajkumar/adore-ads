@@ -63,7 +63,7 @@ public class NativeAdCarouselAdapter extends RecyclerView.Adapter<NativeAdCarous
         FrameLayout container = new FrameLayout(ctx);
         container.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
+                ViewGroup.LayoutParams.MATCH_PARENT));
         return new CarouselViewHolder(container);
     }
 
