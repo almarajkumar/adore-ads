@@ -141,10 +141,40 @@ public final class AdoreAds {
         InterstitialAdManager.getInstance().setCooldownSeconds(config.getInterstitialCooldownSeconds());
         RewardAdManager.getInstance().populateFromConfig(config);
 
+        // Start ad preloading if enabled
+        if (config.isPreloadingEnabled()) {
+            startPreloading(application, config);
+        }
+
         // Auto-fetch remote config if enabled
         if (config.isRemoteConfigEnabled()) {
             ads.fetchRemoteConfig(null);
         }
+    }
+
+    /**
+     * Start preloading for all registered interstitial and reward placements.
+     */
+    private static void startPreloading(Application application, AdoreAdsConfig config) {
+        int bufferSize = config.getPreloadBufferSize();
+        com.adoreapps.ai.ads.manager.AdPreloadManager preloader =
+                com.adoreapps.ai.ads.manager.AdPreloadManager.getInstance();
+
+        for (Map.Entry<String, PlacementConfig> entry : config.getInterstitialPlacements().entrySet()) {
+            PlacementConfig pc = entry.getValue();
+            if (pc.isEnabled() && !pc.getAdUnitIds().isEmpty()) {
+                preloader.startInterstitial(application, entry.getKey(),
+                        pc.getAdUnitIds().get(0), bufferSize);
+            }
+        }
+        for (Map.Entry<String, PlacementConfig> entry : config.getRewardPlacements().entrySet()) {
+            PlacementConfig pc = entry.getValue();
+            if (pc.isEnabled() && !pc.getAdUnitIds().isEmpty()) {
+                preloader.startReward(application, entry.getKey(),
+                        pc.getAdUnitIds().get(0), bufferSize);
+            }
+        }
+        Log.i(TAG, "Ad preloading started (native API: " + preloader.isNativeApiAvailable() + ")");
     }
 
     /**

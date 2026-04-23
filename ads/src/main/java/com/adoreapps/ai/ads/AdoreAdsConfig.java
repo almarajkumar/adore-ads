@@ -41,6 +41,10 @@ public class AdoreAdsConfig {
     // Facebook
     private final boolean facebookEnabled;
 
+    // Preloading (v1.5.1)
+    private final boolean preloadingEnabled;
+    private final int preloadBufferSize;
+
     // Remote Config
     private final boolean remoteConfigEnabled;
     private final @XmlRes int remoteConfigDefaultsResId;
@@ -91,6 +95,8 @@ public class AdoreAdsConfig {
         this.testDeviceMode = builder.testDeviceMode;
         this.testDeviceIds = builder.testDeviceIds;
         this.facebookEnabled = builder.facebookEnabled;
+        this.preloadingEnabled = builder.preloadingEnabled;
+        this.preloadBufferSize = builder.preloadBufferSize;
         this.remoteConfigEnabled = builder.remoteConfigEnabled;
         this.remoteConfigDefaultsResId = builder.remoteConfigDefaultsResId;
         this.nativePlacements = builder.nativePlacements;
@@ -128,6 +134,9 @@ public class AdoreAdsConfig {
     public List<String> getTestDeviceIds() { return testDeviceIds; }
 
     public boolean isFacebookEnabled() { return facebookEnabled; }
+
+    public boolean isPreloadingEnabled() { return preloadingEnabled; }
+    public int getPreloadBufferSize() { return preloadBufferSize; }
 
     public boolean isRemoteConfigEnabled() { return remoteConfigEnabled; }
     public @XmlRes int getRemoteConfigDefaultsResId() { return remoteConfigDefaultsResId; }
@@ -183,6 +192,9 @@ public class AdoreAdsConfig {
         private List<String> testDeviceIds = new ArrayList<>();
 
         private boolean facebookEnabled = true;
+
+        private boolean preloadingEnabled = false;
+        private int preloadBufferSize = 2;
 
         private boolean remoteConfigEnabled = false;
         private @XmlRes int remoteConfigDefaultsResId = 0;
@@ -255,6 +267,22 @@ public class AdoreAdsConfig {
 
         // Facebook (SDK init + event logging — default true)
         public Builder setFacebookEnabled(boolean enabled) { this.facebookEnabled = enabled; return this; }
+
+        /**
+         * Enable ad preloading. When enabled, interstitials and rewards are
+         * preloaded in the background using AdMob's Preloader API (if available)
+         * or a manual fallback queue. Default: false.
+         */
+        public Builder setPreloadingEnabled(boolean enabled) { this.preloadingEnabled = enabled; return this; }
+
+        /**
+         * Max ads cached per placement when preloading. Clamped to [1, 4].
+         * AdMob's recommended maximum is 4. Default: 2.
+         */
+        public Builder setPreloadBufferSize(int size) {
+            this.preloadBufferSize = Math.max(1, Math.min(4, size));
+            return this;
+        }
 
         // Remote Config
         public Builder setRemoteConfigEnabled(boolean enabled) { this.remoteConfigEnabled = enabled; return this; }

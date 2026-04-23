@@ -53,6 +53,7 @@ public class RewardAdManager {
 
     // Placement map for config-based loading by key
     private final Map<String, AdUnitsConfig> rewardAdMap = new ConcurrentHashMap<>();
+    private final Map<String, PlacementConfig> placementConfigMap = new ConcurrentHashMap<>();
 
     // Cached reward ad for instant show
     private RewardedAd cachedRewardAd = null;
@@ -74,6 +75,7 @@ public class RewardAdManager {
                     config.getViewEventName(),
                     config.getClickEventName()
             ));
+            placementConfigMap.put(key, config);
         }
     }
 
@@ -81,7 +83,10 @@ public class RewardAdManager {
      * Remove a reward ad placement.
      */
     public void removePlacement(String key) {
-        if (key != null) rewardAdMap.remove(key);
+        if (key != null) {
+            rewardAdMap.remove(key);
+            placementConfigMap.remove(key);
+        }
     }
 
     /**
@@ -101,7 +106,57 @@ public class RewardAdManager {
             return;
         }
         isUserEarnedReward = false;
-        loadAndShowRewardAdWithIds(activity, new ArrayList<>(config.adUnitIds), adFinished);
+
+        // 1. Try preload cache first
+        com.google.android.gms.ads.rewarded.RewardedAd preloaded =
+                AdPreloadManager.getInstance().pollReward(activity.getApplicationContext(), placementKey);
+        if (preloaded != null) {
+            AdCallback cb = buildRewardCallback(activity, adFinished, null);
+            AdsMobileAdsManager.getInstance().showRewardAd(activity, preloaded, cb);
+            return;
+        }
+
+        // 2. Load fresh — respect LoadMode
+        PlacementConfig pc = placementConfigMap.get(placementKey);
+        ArrayList<String> ids = new ArrayList<>(config.adUnitIds);
+        if (pc != null && pc.getLoadMode() == com.adoreapps.ai.ads.settings.LoadMode.SINGLE && !ids.isEmpty()) {
+            ids = new ArrayList<>();
+            ids.add(config.adUnitIds.get(0));
+        }
+        loadAndShowRewardAdWithIds(activity, ids, adFinished);
+    }
+
+    /**
+     * Build the reward AdCallback used when showing a preloaded reward ad.
+     * Separated so we can reuse the callback construction.
+     */
+    private AdCallback buildRewardCallback(Activity activity, AdFinished onRewardComplete,
+                                            LoadingAdsDialog loadingAdsDialog) {
+        return new AdCallback() {
+            @Override
+            public void onAdDismissedFullScreenContent() {
+                super.onAdDismissedFullScreenContent();
+                if (loadingAdsDialog != null) loadingAdsDialog.dismiss();
+                if (isUserEarnedReward) {
+                    onRewardComplete.onAdFinished();
+                } else {
+                    onRewardComplete.onAdFailed();
+                }
+            }
+
+            @Override
+            public void onUserEarnedReward(ApRewardItem rewardItem) {
+                super.onUserEarnedReward(rewardItem);
+                isUserEarnedReward = true;
+            }
+
+            @Override
+            public void onAdFailedToShowFullScreenContent(@androidx.annotation.NonNull ApAdError apAdError) {
+                super.onAdFailedToShowFullScreenContent(apAdError);
+                if (loadingAdsDialog != null) loadingAdsDialog.dismiss();
+                onRewardComplete.onAdFailed();
+            }
+        };
     }
 
     /**
@@ -109,6 +164,7 @@ public class RewardAdManager {
      */
     public void populateFromConfig(AdoreAdsConfig adoreConfig) {
         rewardAdMap.clear();
+        placementConfigMap.clear();
         for (Map.Entry<String, PlacementConfig> entry : adoreConfig.getRewardPlacements().entrySet()) {
             PlacementConfig pc = entry.getValue();
             if (pc.isEnabled() && !pc.getAdUnitIds().isEmpty()) {
@@ -117,6 +173,7 @@ public class RewardAdManager {
                         pc.getViewEventName(),
                         pc.getClickEventName()
                 ));
+                placementConfigMap.put(entry.getKey(), pc);
             }
         }
     }

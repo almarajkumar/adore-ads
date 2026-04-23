@@ -49,6 +49,9 @@ public class InterstitialAdManager {
     // Placement map for config-based loading by key
     private final Map<String, AdUnitsConfig> interstitialAdMap = new ConcurrentHashMap<>();
 
+    // Full PlacementConfig (loadMode, backup native, countdown)
+    private final Map<String, PlacementConfig> placementConfigMap = new ConcurrentHashMap<>();
+
     // =========================================================
     // RUNTIME PLACEMENT MANAGEMENT
     // =========================================================
@@ -64,6 +67,7 @@ public class InterstitialAdManager {
                     config.getViewEventName(),
                     config.getClickEventName()
             ));
+            placementConfigMap.put(key, config);
         }
     }
 
@@ -71,7 +75,10 @@ public class InterstitialAdManager {
      * Remove an interstitial ad placement.
      */
     public void removePlacement(String key) {
-        if (key != null) interstitialAdMap.remove(key);
+        if (key != null) {
+            interstitialAdMap.remove(key);
+            placementConfigMap.remove(key);
+        }
     }
 
     /**
@@ -90,7 +97,43 @@ public class InterstitialAdManager {
             adFinished.onAdFinished();
             return;
         }
-        loadAdWithPriorityIds(activity, new ArrayList<>(config.adUnitIds), true, adFinished);
+        if (PurchaseManager.getInstance().isPurchased()) {
+            adFinished.onAdFinished();
+            return;
+        }
+        if (!ConsentManager.getInstance(activity).canRequestAds()) {
+            adFinished.onAdFinished();
+            return;
+        }
+        if (isInCooldown(activity)) {
+            adFinished.onAdFinished();
+            return;
+        }
+        if (activity.isFinishing() || activity.isDestroyed()) {
+            adFinished.onAdFinished();
+            return;
+        }
+
+        // 1. Try preload cache first
+        InterstitialAd preloaded = AdPreloadManager.getInstance()
+                .pollInterstitial(activity.getApplicationContext(), placementKey);
+        if (preloaded != null) {
+            show(activity, preloaded, () -> adFinished.onAdFinished());
+            return;
+        }
+
+        // 2. Load fresh — respect LoadMode
+        PlacementConfig pc = placementConfigMap.get(placementKey);
+        ArrayList<String> ids = new ArrayList<>(config.adUnitIds);
+        if (pc != null && pc.getLoadMode() == com.adoreapps.ai.ads.settings.LoadMode.SINGLE && !ids.isEmpty()) {
+            // Single mode — only try first ad unit
+            ids = new ArrayList<>();
+            ids.add(config.adUnitIds.get(0));
+        }
+
+        LoadingAdsDialog loadingAdsDialog = new LoadingAdsDialog(activity);
+        loadingAdsDialog.showWithTimeout(interstitialTimeoutMs, () -> adFinished.onAdFinished());
+        loadAdRecursiveWithBackup(activity, placementKey, ids, adFinished, loadingAdsDialog);
     }
 
     /**
@@ -98,6 +141,7 @@ public class InterstitialAdManager {
      */
     public void populateFromConfig(com.adoreapps.ai.ads.AdoreAdsConfig adoreConfig) {
         interstitialAdMap.clear();
+        placementConfigMap.clear();
         for (Map.Entry<String, PlacementConfig> entry : adoreConfig.getInterstitialPlacements().entrySet()) {
             PlacementConfig pc = entry.getValue();
             if (pc.isEnabled() && !pc.getAdUnitIds().isEmpty()) {
@@ -106,6 +150,7 @@ public class InterstitialAdManager {
                         pc.getViewEventName(),
                         pc.getClickEventName()
                 ));
+                placementConfigMap.put(entry.getKey(), pc);
             }
         }
     }
@@ -245,6 +290,76 @@ public class InterstitialAdManager {
                         if (defaultAd != null) {
                             loadingAdsDialog.dismiss();
                             show(activity, defaultAd, showNextScreen);
+                        } else {
+                            showNextScreen.run();
+                        }
+                    }
+                }
+        );
+    }
+
+    /**
+     * Load interstitial with full-screen native fallback when all ad unit IDs
+     * and DefaultAdPool fail. Uses placement's backupNativePlacementKey.
+     */
+    private void loadAdRecursiveWithBackup(Activity activity, String placementKey,
+                                             ArrayList<String> interstitialAdIds,
+                                             AdFinished adFinished,
+                                             LoadingAdsDialog loadingAdsDialog) {
+        Runnable showNextScreen = () -> {
+            if (!loadingAdsDialog.isTimedOut()) {
+                adFinished.onAdFinished();
+            }
+            loadingAdsDialog.dismiss();
+        };
+
+        AdsMobileAdsManager.getInstance().loadAlternateInterstitialAds(
+                activity,
+                interstitialAdIds,
+                new AdCallback() {
+                    @Override
+                    public void onResultInterstitialAd(ApInterstitialAd interstitialAd) {
+                        super.onResultInterstitialAd(interstitialAd);
+                        if (loadingAdsDialog.isTimedOut()) return;
+                        loadingAdsDialog.dismiss();
+                        show(activity, interstitialAd.getInterstitialAd(), showNextScreen);
+                    }
+
+                    @Override
+                    public void onNextScreen() {
+                        super.onNextScreen();
+                        if (loadingAdsDialog.isTimedOut()) return;
+                        showNextScreen.run();
+                    }
+
+                    @Override
+                    public void onAdFailedToLoad(ApAdError i) {
+                        super.onAdFailedToLoad(i);
+                        if (loadingAdsDialog.isTimedOut()) return;
+
+                        // Try default fallback pool first
+                        InterstitialAd defaultAd = DefaultAdPool.getInstance()
+                                .consumeDefaultInterstitialAd(activity);
+                        if (defaultAd != null) {
+                            loadingAdsDialog.dismiss();
+                            show(activity, defaultAd, showNextScreen);
+                            return;
+                        }
+
+                        // All interstitial options exhausted — try backup native if configured
+                        PlacementConfig pc = placementConfigMap.get(placementKey);
+                        if (pc != null && pc.hasBackupNative()) {
+                            loadingAdsDialog.dismiss();
+                            // Launch full-screen native as fallback
+                            com.adoreapps.ai.ads.dialog.FullScreenNativeAdActivity.show(
+                                    activity,
+                                    pc.getBackupNativePlacementKey(),
+                                    pc.getBackupCountdownSeconds(),
+                                    true
+                            );
+                            // Apply cooldown as if interstitial was shown
+                            startCooldown(activity);
+                            adFinished.onAdFinished();
                         } else {
                             showNextScreen.run();
                         }
