@@ -370,8 +370,24 @@ public class AdsMobileAdsManager {
 
 
     public AdRequest getAdRequest() {
+        return getAdRequest(null);
+    }
+
+    /**
+     * Build an AdRequest. When {@code collapsiblePosition} is non-null
+     * ("top" or "bottom"), the request opts in to AdMob collapsible
+     * banner format via the AdMob adapter network extras bundle.
+     *
+     * @param collapsiblePosition "top", "bottom", or null for a standard request
+     */
+    public AdRequest getAdRequest(String collapsiblePosition) {
         if (this.isAdsEnabled() && !PurchaseManager.getInstance().isPurchased()) {
             AdRequest.Builder builder = new AdRequest.Builder();
+            if (collapsiblePosition != null && !collapsiblePosition.isEmpty()) {
+                Bundle extras = new Bundle();
+                extras.putString("collapsible", collapsiblePosition);
+                builder.addNetworkExtrasBundle(AdMobAdapter.class, extras);
+            }
             return builder.build();
         } else {
             return null;
@@ -674,18 +690,28 @@ public class AdsMobileAdsManager {
     }
 
     public void loadBanner(Activity mActivity, final String id, final FrameLayout adContainer, final AdCallback callback) {
-        loadBanner(mActivity, id, adContainer, null, callback);
+        loadBanner(mActivity, id, adContainer, null, null, callback);
     }
 
     public void loadBanner(Activity mActivity, final String id, final FrameLayout adContainer,
                            AdSize customSize, final AdCallback callback) {
+        loadBanner(mActivity, id, adContainer, customSize, null, callback);
+    }
+
+    /**
+     * Load a banner ad. If {@code collapsiblePosition} is non-null
+     * ("top" or "bottom"), the request opts in to AdMob's collapsible
+     * banner format.
+     */
+    public void loadBanner(Activity mActivity, final String id, final FrameLayout adContainer,
+                           AdSize customSize, String collapsiblePosition, final AdCallback callback) {
         if(PurchaseManager.getInstance().isPurchased()) {
             adContainer.removeAllViews();
             adContainer.setVisibility(View.GONE);
             return;
         }
-        this.log("Request Banner :" + id);
-        AdRequest request = this.getAdRequest();
+        this.log("Request Banner :" + id + (collapsiblePosition != null ? " collapsible=" + collapsiblePosition : ""));
+        AdRequest request = this.getAdRequest(collapsiblePosition);
         if (request == null) {
             adContainer.removeAllViews();
             adContainer.setVisibility(View.GONE);
@@ -778,11 +804,21 @@ public class AdsMobileAdsManager {
 
 
     public void loadAlternateBanner(final Activity activity, final List<String> idsInput, final FrameLayout adContainer) {
-        loadAlternateBanner(activity, idsInput, adContainer, null);
+        loadAlternateBanner(activity, idsInput, adContainer, null, null);
     }
 
     public void loadAlternateBanner(final Activity activity, final List<String> idsInput,
                                      final FrameLayout adContainer, final AdSize customSize) {
+        loadAlternateBanner(activity, idsInput, adContainer, customSize, null);
+    }
+
+    /**
+     * Waterfall banner load. Pass {@code collapsiblePosition} = "top" or
+     * "bottom" to opt the placement into AdMob collapsible banner format.
+     */
+    public void loadAlternateBanner(final Activity activity, final List<String> idsInput,
+                                     final FrameLayout adContainer, final AdSize customSize,
+                                     final String collapsiblePosition) {
         if(PurchaseManager.getInstance().isPurchased()) {
             adContainer.removeAllViews();
             adContainer.setVisibility(View.GONE);
@@ -810,14 +846,14 @@ public class AdsMobileAdsManager {
                     bannerId,
                     AdType.BANNER
             );
-            this.loadBanner(activity, bannerId, adContainer, customSize, new AdCallback() {
+            this.loadBanner(activity, bannerId, adContainer, customSize, collapsiblePosition, new AdCallback() {
                 public void onAdFailedToLoad(@NonNull ApAdError i) {
                     super.onAdFailedToLoad(i);
                     Log.w("AdmobLogger", "loadAlternateBanner: fail-" + finalBannerId);
                     ids.remove(0);
                     if (!ids.isEmpty()) {
                         adContainer.setVisibility(View.VISIBLE);
-                        loadAlternateBanner(activity, ids, adContainer, customSize);
+                        loadAlternateBanner(activity, ids, adContainer, customSize, collapsiblePosition);
                     }
                 }
 

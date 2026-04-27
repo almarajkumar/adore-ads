@@ -577,7 +577,11 @@ public class NativeAdManager {
         // Check preloaded cache — show immediately if available and not expired
         AdsResponse<NativeAd> existing = preloadedAds.get(position);
         if (existing != null && !isAdExpired(position)) {
+            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logCacheHit(activity,
+                    position, existing.getUnitID(), com.adoreapps.ai.ads.event.AdType.NATIVE);
             showNativeAd(activity, existing, placeHolder, layoutId, shimmer);
+            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logShow(activity,
+                    position, existing.getUnitID(), com.adoreapps.ai.ads.event.AdType.NATIVE);
         } else {
             // Expired or not cached — clear stale ad and load fresh
             if (existing != null) {
@@ -591,25 +595,45 @@ public class NativeAdManager {
                 return;
             }
             adStatusMap.put(position, AdStatus.LOADING);
+            final long loadStart = System.currentTimeMillis();
+            if (!adIds.isEmpty()) {
+                com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logRequest(activity,
+                        position, adIds.get(0), com.adoreapps.ai.ads.event.AdType.NATIVE);
+            }
             AdsMobileAdsManager.getInstance().loadAlternateNative(
                     activity, adIds,
                     new AdCallback() {
                         @Override
                         public void onNativeAds(ApAdNative nativeAd, String unitID) {
+                            long latency = System.currentTimeMillis() - loadStart;
+                            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logLoadSuccess(
+                                    activity, position, unitID, com.adoreapps.ai.ads.event.AdType.NATIVE, latency);
                             if (activity.isFinishing() || activity.isDestroyed()) return;
                             AdsResponse<NativeAd> ad = new AdsResponse<>(nativeAd.getNativeAd(), unitID);
                             preloadedAds.put(position, ad);
                             adLoadTimestamps.put(position, System.currentTimeMillis());
                             adStatusMap.put(position, AdStatus.LOADED);
                             showNativeAd(activity, ad, placeHolder, layoutId, shimmer);
+                            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logShow(activity,
+                                    position, unitID, com.adoreapps.ai.ads.event.AdType.NATIVE);
                         }
 
                         @Override
                         public void onAdFailedToLoad(@NonNull ApAdError error) {
+                            long latency = System.currentTimeMillis() - loadStart;
+                            int code = error.getLoadAdError() != null ? error.getLoadAdError().getCode() : -1;
+                            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logLoadFailed(
+                                    activity, position,
+                                    !adIds.isEmpty() ? adIds.get(0) : null,
+                                    com.adoreapps.ai.ads.event.AdType.NATIVE,
+                                    code, error.getMessage(), latency);
                             adStatusMap.put(position, AdStatus.FAILED);
                             // Try default fallback pool
                             AdsResponse<NativeAd> defaultAd = DefaultAdPool.getInstance().getDefaultNativeAd(activity);
                             if (defaultAd != null) {
+                                com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logFallbackUsed(
+                                        activity, position, defaultAd.getUnitID(),
+                                        com.adoreapps.ai.ads.event.AdType.NATIVE, "default_pool");
                                 showNativeAd(activity, defaultAd, placeHolder, layoutId, shimmer);
                             } else {
                                 hideAdViews(placeHolder, shimmer);
@@ -662,22 +686,43 @@ public class NativeAdManager {
             return;
         }
 
+        final long loadStart = System.currentTimeMillis();
+        if (!adIds.isEmpty()) {
+            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logRequest(activity,
+                    position, adIds.get(0), com.adoreapps.ai.ads.event.AdType.NATIVE);
+        }
+
         AdsMobileAdsManager.getInstance().loadAlternateNative(
                 activity, adIds,
                 new AdCallback() {
                     @Override
                     public void onNativeAds(ApAdNative nativeAd, String unitID) {
+                        long latency = System.currentTimeMillis() - loadStart;
+                        com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logLoadSuccess(
+                                activity, position, unitID, com.adoreapps.ai.ads.event.AdType.NATIVE, latency);
                         if (activity.isFinishing() || activity.isDestroyed()) return;
                         AdsResponse<NativeAd> ad = new AdsResponse<>(nativeAd.getNativeAd(), unitID);
                         showNativeAd(activity, ad, placeHolder, layoutId, shimmer);
+                        com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logShow(activity,
+                                position, unitID, com.adoreapps.ai.ads.event.AdType.NATIVE);
                         if (externalCallback != null) externalCallback.onNativeAds(nativeAd, unitID);
                     }
 
                     @Override
                     public void onAdFailedToLoad(@NonNull ApAdError error) {
+                        long latency = System.currentTimeMillis() - loadStart;
+                        int code = error.getLoadAdError() != null ? error.getLoadAdError().getCode() : -1;
+                        com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logLoadFailed(
+                                activity, position,
+                                !adIds.isEmpty() ? adIds.get(0) : null,
+                                com.adoreapps.ai.ads.event.AdType.NATIVE,
+                                code, error.getMessage(), latency);
                         // Try default fallback pool
                         AdsResponse<NativeAd> defaultAd = DefaultAdPool.getInstance().getDefaultNativeAd(activity);
                         if (defaultAd != null) {
+                            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logFallbackUsed(
+                                    activity, position, defaultAd.getUnitID(),
+                                    com.adoreapps.ai.ads.event.AdType.NATIVE, "default_pool");
                             showNativeAd(activity, defaultAd, placeHolder, layoutId, shimmer);
                         } else {
                             hideAdViews(placeHolder, shimmer);
@@ -830,7 +875,18 @@ public class NativeAdManager {
                 @Override
                 public void run() {
                     if (adapter.getItemCount() == 0) return;
-                    int next = (pager.getCurrentItem() + 1) % adapter.getItemCount();
+                    int current = pager.getCurrentItem();
+                    int next;
+                    if (adapter.isCircular()) {
+                        // In circular mode, just increment — adapter maps modulo internally
+                        next = current + 1;
+                        // Safety: wrap around before hitting the large count limit
+                        if (next >= adapter.getItemCount() - 1) {
+                            next = adapter.getStartPosition();
+                        }
+                    } else {
+                        next = (current + 1) % adapter.getItemCount();
+                    }
                     pager.setCurrentItem(next, true);
                     slideHandler.postDelayed(this, slideIntervalMs);
                 }
@@ -872,21 +928,34 @@ public class NativeAdManager {
                               final String placementKey,
                               final String tag,
                               @androidx.annotation.Nullable androidx.lifecycle.LifecycleOwner lifecycleOwner) {
-        if (activity == null || container == null || placementKey == null) return;
+        Log.d(TAG, "showCarousel called: tag=" + tag + " placement=" + placementKey);
+        if (activity == null || container == null || placementKey == null) {
+            Log.w(TAG, "Carousel aborted: null args (activity=" + activity + " container=" + container + " key=" + placementKey + ")");
+            return;
+        }
         if (PurchaseManager.getInstance().isPurchased()) {
+            Log.d(TAG, "Carousel aborted: user is premium");
             container.setVisibility(View.GONE);
             return;
         }
         AdUnitsConfig config = nativeAdMap.get(placementKey);
         if (config == null || config.adUnitIds.isEmpty()) {
+            Log.w(TAG, "Carousel aborted: no placement config for '" + placementKey
+                    + "' (registered keys=" + nativeAdMap.keySet() + ")");
             container.setVisibility(View.GONE);
             return;
         }
-        if (!ConsentManager.getInstance(activity).canRequestAds()
-                || !NetworkUtils.isNetworkAvailable(activity)) {
+        if (!ConsentManager.getInstance(activity).canRequestAds()) {
+            Log.w(TAG, "Carousel aborted: consent not granted");
             container.setVisibility(View.GONE);
             return;
         }
+        if (!NetworkUtils.isNetworkAvailable(activity)) {
+            Log.w(TAG, "Carousel aborted: no network");
+            container.setVisibility(View.GONE);
+            return;
+        }
+        Log.d(TAG, "Carousel proceeding: " + placementKey + " has " + config.adUnitIds.size() + " ad IDs");
 
         // Stop existing carousel for this tag
         stopCarousel(tag);
@@ -899,12 +968,15 @@ public class NativeAdManager {
 
         androidx.viewpager2.widget.ViewPager2 pager =
                 carouselRoot.findViewById(com.adoreapps.ai.ads.R.id.ad_carousel_pager);
-        NativeAdCarouselAdapter adapter = new NativeAdCarouselAdapter(adLayoutId);
-        pager.setAdapter(adapter);
 
-        // Resolve slide interval from PlacementConfig
+        // Resolve settings from PlacementConfig
         PlacementConfig pc = placementConfigMap.get(placementKey);
         long slideIntervalMs = (pc != null ? pc.getCarouselSlideIntervalSeconds() : 5) * 1000L;
+        boolean circular = pc == null || pc.isCarouselCircular();
+
+        NativeAdCarouselAdapter adapter = new NativeAdCarouselAdapter(adLayoutId);
+        adapter.setCircular(circular);
+        pager.setAdapter(adapter);
 
         final CarouselSession session = new CarouselSession(activity, container, placementKey,
                 adLayoutId, adapter, pager, slideIntervalMs);
@@ -966,12 +1038,15 @@ public class NativeAdManager {
                         // Update adapter after every ad arrives (so user sees progress)
                         act.runOnUiThread(() -> {
                             adapter.setAds(snapshot);
-                            if (snapshot.size() == 1 && !session.isSliding) {
+                            // Jump to middle of circular range so user can swipe backward
+                            if (adapter.isCircular() && snapshot.size() >= 2) {
+                                session.pager.setCurrentItem(adapter.getStartPosition(), false);
+                            }
+                            // Start sliding once we have at least 2 ads
+                            if (snapshot.size() >= 2 && !session.isSliding) {
                                 session.startSliding();
-                            } else if (session.isSliding) {
-                                // Restart slider so it uses new count
-                                session.stopSliding();
-                                session.startSliding();
+                                Log.d(TAG, "Carousel auto-slide started (size=" + snapshot.size()
+                                        + ", interval=" + session.slideIntervalMs + "ms, circular=" + adapter.isCircular() + ")");
                             }
                             if (allDone) {
                                 registerCarouselRefresh(session);
@@ -997,7 +1072,9 @@ public class NativeAdManager {
                                     c.setVisibility(View.GONE);
                                 } else {
                                     adapter.setAds(snapshot);
-                                    if (!session.isSliding) session.startSliding();
+                                    if (snapshot.size() >= 2 && !session.isSliding) {
+                                        session.startSliding();
+                                    }
                                     registerCarouselRefresh(session);
                                 }
                             });
@@ -1013,6 +1090,12 @@ public class NativeAdManager {
      * On each tick, all ads in the carousel reload in parallel.
      */
     private void registerCarouselRefresh(final CarouselSession session) {
+        // Check per-placement carousel auto-refresh flag (default: false)
+        PlacementConfig pc = placementConfigMap.get(session.placementKey);
+        if (pc == null || !pc.isCarouselAutoRefreshEnabled()) {
+            Log.d(TAG, "Carousel auto-refresh disabled for " + session.placementKey);
+            return;
+        }
         if (!autoRefreshEnabled) return;
         long refreshMs = getRefreshInterval() * 1000L;
         if (refreshMs < MIN_REFRESH_INTERVAL * 1000L) return;

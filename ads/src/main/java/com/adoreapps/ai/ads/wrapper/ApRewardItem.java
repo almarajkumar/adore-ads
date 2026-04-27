@@ -12,4 +12,12 @@ public class ApRewardItem {
     public RewardItem getRewardItem() {
         return this.rewardItem;
     }
+
+    public String getType() {
+        return rewardItem != null ? rewardItem.getType() : null;
+    }
+
+    public int getAmount() {
+        return rewardItem != null ? rewardItem.getAmount() : 0;
+    }
 }

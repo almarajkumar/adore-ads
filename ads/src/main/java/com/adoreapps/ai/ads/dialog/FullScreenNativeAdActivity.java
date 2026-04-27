@@ -12,6 +12,8 @@ import android.widget.TextView;
 import com.adoreapps.ai.ads.AdCallback;
 import com.adoreapps.ai.ads.R;
 import com.adoreapps.ai.ads.core.AppOpenAdManager;
+import com.adoreapps.ai.ads.event.AdType;
+import com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents;
 import com.adoreapps.ai.ads.manager.NativeAdManager;
 import com.adoreapps.ai.ads.settings.AdConstants;
 
@@ -34,6 +36,10 @@ public class FullScreenNativeAdActivity extends Activity {
     public static final int RESULT_AD_FAILED = 3;
 
     private CountDownTimer countDownTimer;
+    private String placementKey;
+    private boolean countdownCompleted = false;
+    private long countdownStartMs = 0L;
+    private int initialCountdown = 0;
 
     /**
      * Launch the full-screen native ad activity.
@@ -74,6 +80,7 @@ public class FullScreenNativeAdActivity extends Activity {
         setContentView(R.layout.adore_activity_full_screen_native);
 
         String placement = getIntent().getStringExtra(EXTRA_PLACEMENT);
+        this.placementKey = placement != null ? placement : "NATIVE_SPLASH";
         int countdown = getIntent().getIntExtra(EXTRA_COUNTDOWN, AdConstants.FULL_SCREEN_COUNTDOWN_SECONDS);
         boolean showSkip = getIntent().getBooleanExtra(EXTRA_SHOW_SKIP, true);
 
@@ -99,6 +106,10 @@ public class FullScreenNativeAdActivity extends Activity {
                     @Override
                     public void onAdFailedToLoad(com.adoreapps.ai.ads.wrapper.ApAdError error) {
                         super.onAdFailedToLoad(error);
+                        FirebaseAnalyticsEvents.getInstance().logShowFailed(
+                                FullScreenNativeAdActivity.this,
+                                placementKey, null, AdType.NATIVE,
+                                -1, "fullscreen_native_load_failed");
                         setResult(RESULT_AD_FAILED);
                         finish();
                     }
@@ -108,6 +119,12 @@ public class FullScreenNativeAdActivity extends Activity {
         // Skip/close button action
         btnSkip.setOnClickListener(v -> {
             if (countDownTimer != null) countDownTimer.cancel();
+            long elapsed = countdownStartMs > 0
+                    ? (System.currentTimeMillis() - countdownStartMs) / 1000L
+                    : initialCountdown;
+            FirebaseAnalyticsEvents.getInstance().logSkipped(
+                    FullScreenNativeAdActivity.this,
+                    placementKey, null, AdType.NATIVE, elapsed);
             setResult(RESULT_AD_SKIPPED);
             finish();
         });
@@ -124,6 +141,8 @@ public class FullScreenNativeAdActivity extends Activity {
 
         tvCountdown.setVisibility(View.VISIBLE);
         tvCountdown.setText(String.valueOf(seconds));
+        countdownStartMs = System.currentTimeMillis();
+        initialCountdown = seconds;
 
         countDownTimer = new CountDownTimer(seconds * 1000L, 1000) {
             @Override
@@ -137,6 +156,7 @@ public class FullScreenNativeAdActivity extends Activity {
                 tvCountdown.setVisibility(View.GONE);
                 btnSkip.setText(showSkipAfter ? "Skip" : "Close");
                 btnSkip.setVisibility(View.VISIBLE);
+                countdownCompleted = true;
                 setResult(RESULT_AD_SHOWN);
             }
         };

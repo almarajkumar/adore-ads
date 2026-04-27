@@ -129,8 +129,11 @@ public class RemoteConfigManager {
     }
 
     public boolean getBoolean(String key, boolean defaultValue) {
-        if (remoteConfig.getInfo().getLastFetchStatus() == FirebaseRemoteConfig.LAST_FETCH_STATUS_SUCCESS
-                || remoteConfig.getValue(key).getSource() != FirebaseRemoteConfig.VALUE_SOURCE_DEFAULT) {
+        // Only trust the remote value if the key was explicitly set in Firebase
+        // (or via XML defaults). If source is STATIC, the key doesn't exist.
+        int source = remoteConfig.getValue(key).getSource();
+        if (source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE
+                || source == FirebaseRemoteConfig.VALUE_SOURCE_DEFAULT) {
             return remoteConfig.getBoolean(key);
         }
         return defaultValue;

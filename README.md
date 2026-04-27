@@ -2,19 +2,24 @@
 
 Full-featured Android ad monetization library with AdMob, mediation, auto-refresh, preload, fallback pool, and lifecycle management.
 
+## What's new in 1.5.5
+
+- **Collapsible banners** — Per-placement TOP/BOTTOM anchored collapsible banners via `setCollapsibleAnchor(...)`. Standard banners unchanged.
+- **Placement-aware Firebase Analytics (1.5.4)** — Every manager auto-fires a 13-event funnel (`ad_request`, `ad_load_success`, `ad_show`, `ad_impression`, `ad_click`, `ad_dismissed`, `ad_show_blocked`, `ad_cache_hit`, `ad_fallback_used`, etc.) tagged with `placement_key`, `ad_format`, `ad_unit_id`. Queryable in Firebase Console with no app changes.
+
 ## Features
 
 - **Native Ads** — Parallel preload, auto-refresh, expiry, default pool fallback
 - **Interstitial Ads** — Priority waterfall, configurable cooldown timer
 - **Reward Ads** — Preload caching, auto-replenish after consumption, expiry check
-- **Banner Ads** — Waterfall loading with default fallback
+- **Banner Ads** — Waterfall loading with default fallback, optional collapsible anchor (TOP/BOTTOM)
 - **App Open Ads** — Resume ads with waterfall, per-activity control
 - **Default Ad Pool** — Global fallback for all ad types when position-specific ads fail
 - **6 Mediation Networks** — Facebook, AppLovin, Vungle, Mintegral, Pangle, Unity
 - **UMP Consent** — Google User Messaging Platform for GDPR (configurable test devices)
 - **In-App Billing** — Google Play Billing for premium check
 - **Adjust Attribution** — Ad revenue and purchase tracking
-- **Firebase Analytics & Crashlytics** — Built-in event tracking
+- **Firebase Analytics & Crashlytics** — Automatic per-placement funnel events on every ad
 - **Firebase Remote Config** — Dynamic ad placements, toggles, and ad unit IDs from console
 - **Centralized Constants** — All timing, expiry, and test IDs in `AdConstants`
 
@@ -28,7 +33,7 @@ maven {
 }
 
 // app/build.gradle
-implementation 'com.adoreapps.ai:ads:1.2.0'
+implementation 'com.adoreapps.ai:ads:1.5.5'
 ```
 
 ## Quick Start

@@ -54,6 +54,8 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
     private final String ACTION_DISMISS_NATIVE = "ACTION_DISMISS_NATIVE";
     private final String ACTION_SHOW_NATIVE = "ACTION_SHOW_NATIVE";
     private boolean isLoading = false;
+    private long appOpenLoadStart = 0L;
+    public static final String PLACEMENT_APP_OPEN = "APP_OPEN_RESUME";
 
     private AppOpenAdManager() {
     }
@@ -171,14 +173,26 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
                 adId,
                 AdType.APP_OPEN
         );
+        FirebaseAnalyticsEvents.getInstance().logRequest(
+                myApplication, PLACEMENT_APP_OPEN, adId, AdType.APP_OPEN);
+        appOpenLoadStart = System.currentTimeMillis();
         this.loadOpenApp(adId, new OpenAdsLoadCallback() {
             public void onAdsLoaded(AppOpenAd ad) {
                 AppOpenAdManager.this.appResumeAd = ad;
                 AppOpenAdManager.this.openAppID = adId;
                 AppOpenAdManager.this.isLoading = false;
+                long latency = System.currentTimeMillis() - appOpenLoadStart;
+                FirebaseAnalyticsEvents.getInstance().logLoadSuccess(
+                        myApplication, PLACEMENT_APP_OPEN, adId, AdType.APP_OPEN, latency);
             }
 
             public void onFail(LoadAdError error) {
+                long latency = System.currentTimeMillis() - appOpenLoadStart;
+                FirebaseAnalyticsEvents.getInstance().logLoadFailed(
+                        myApplication, PLACEMENT_APP_OPEN, adId, AdType.APP_OPEN,
+                        error != null ? error.getCode() : -1,
+                        error != null ? error.getMessage() : "unknown",
+                        latency);
                 remainingIds.remove(0);
                 if (remainingIds.isEmpty()) {
                     AppOpenAdManager.this.isLoading = false;
@@ -356,6 +370,9 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
         Log.d("AppOpenManager", "Will show app open ad");
         FullScreenContentCallback fullScreenContentCallback = new FullScreenContentCallback() {
             public void onAdDismissedFullScreenContent() {
+                FirebaseAnalyticsEvents.getInstance().logDismissed(
+                        currentActivity != null ? currentActivity : myApplication,
+                        PLACEMENT_APP_OPEN, openAppID, AdType.APP_OPEN);
                 AppOpenAdManager.this.appResumeAd = null;
                 AppOpenAdManager.this.isShowingAd = false;
                 AppOpenAdManager.this.dismissDialogLoading();
@@ -363,6 +380,11 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
             }
 
             public void onAdFailedToShowFullScreenContent(AdError adError) {
+                FirebaseAnalyticsEvents.getInstance().logShowFailed(
+                        currentActivity != null ? currentActivity : myApplication,
+                        PLACEMENT_APP_OPEN, openAppID, AdType.APP_OPEN,
+                        adError != null ? adError.getCode() : -1,
+                        adError != null ? adError.getMessage() : "unknown");
                 AppOpenAdManager.this.dismissDialogLoading();
                 AppOpenAdManager.this.appResumeAd = null;
                 AppOpenAdManager.this.myApplication.sendBroadcast(new Intent("ACTION_SHOW_NATIVE"));
@@ -370,6 +392,17 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
 
             public void onAdShowedFullScreenContent() {
                 AppOpenAdManager.this.isShowingAd = true;
+                FirebaseAnalyticsEvents.getInstance().logShow(
+                        currentActivity != null ? currentActivity : myApplication,
+                        PLACEMENT_APP_OPEN, openAppID, AdType.APP_OPEN);
+            }
+
+            @Override
+            public void onAdImpression() {
+                super.onAdImpression();
+                FirebaseAnalyticsEvents.getInstance().logImpression(
+                        currentActivity != null ? currentActivity : myApplication,
+                        PLACEMENT_APP_OPEN, openAppID, AdType.APP_OPEN);
             }
 
             @Override
@@ -379,6 +412,9 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
                         currentActivity,
                         openAppID
                 );
+                FirebaseAnalyticsEvents.getInstance().logClick(
+                        currentActivity != null ? currentActivity : myApplication,
+                        PLACEMENT_APP_OPEN, openAppID, AdType.APP_OPEN);
             }
         };
         this.showAdsWithLoading(fullScreenContentCallback);

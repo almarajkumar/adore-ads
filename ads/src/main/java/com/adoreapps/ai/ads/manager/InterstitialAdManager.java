@@ -10,6 +10,8 @@ import com.adoreapps.ai.ads.wrapper.ApAdError;
 import com.adoreapps.ai.ads.wrapper.ApInterstitialAd;
 import com.adoreapps.ai.ads.consent.ConsentManager;
 import com.adoreapps.ai.ads.billing.PurchaseManager;
+import com.adoreapps.ai.ads.event.AdType;
+import com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents;
 import com.adoreapps.ai.ads.PlacementConfig;
 import com.adoreapps.ai.ads.interfaces.AdFinished;
 import com.adoreapps.ai.ads.dialog.LoadingAdsDialog;
@@ -94,22 +96,32 @@ public class InterstitialAdManager {
     public void loadAndShowByPlacement(Activity activity, String placementKey, AdFinished adFinished) {
         AdUnitsConfig config = interstitialAdMap.get(placementKey);
         if (config == null || config.adUnitIds.isEmpty()) {
+            FirebaseAnalyticsEvents.getInstance().logShowBlocked(activity, placementKey,
+                    AdType.INTERSTITIAL, "no_placement");
             adFinished.onAdFinished();
             return;
         }
         if (PurchaseManager.getInstance().isPurchased()) {
+            FirebaseAnalyticsEvents.getInstance().logShowBlocked(activity, placementKey,
+                    AdType.INTERSTITIAL, "premium");
             adFinished.onAdFinished();
             return;
         }
         if (!ConsentManager.getInstance(activity).canRequestAds()) {
+            FirebaseAnalyticsEvents.getInstance().logShowBlocked(activity, placementKey,
+                    AdType.INTERSTITIAL, "no_consent");
             adFinished.onAdFinished();
             return;
         }
         if (isInCooldown(activity)) {
+            FirebaseAnalyticsEvents.getInstance().logShowBlocked(activity, placementKey,
+                    AdType.INTERSTITIAL, "cooldown");
             adFinished.onAdFinished();
             return;
         }
         if (activity.isFinishing() || activity.isDestroyed()) {
+            FirebaseAnalyticsEvents.getInstance().logShowBlocked(activity, placementKey,
+                    AdType.INTERSTITIAL, "activity_destroyed");
             adFinished.onAdFinished();
             return;
         }
@@ -118,7 +130,9 @@ public class InterstitialAdManager {
         InterstitialAd preloaded = AdPreloadManager.getInstance()
                 .pollInterstitial(activity.getApplicationContext(), placementKey);
         if (preloaded != null) {
-            show(activity, preloaded, () -> adFinished.onAdFinished());
+            FirebaseAnalyticsEvents.getInstance().logCacheHit(activity, placementKey,
+                    preloaded.getAdUnitId(), AdType.INTERSTITIAL);
+            showTracked(activity, placementKey, preloaded, () -> adFinished.onAdFinished());
             return;
         }
 
@@ -129,6 +143,12 @@ public class InterstitialAdManager {
             // Single mode — only try first ad unit
             ids = new ArrayList<>();
             ids.add(config.adUnitIds.get(0));
+        }
+
+        // Fire request event
+        if (!ids.isEmpty()) {
+            FirebaseAnalyticsEvents.getInstance().logRequest(activity, placementKey,
+                    ids.get(0), AdType.INTERSTITIAL);
         }
 
         LoadingAdsDialog loadingAdsDialog = new LoadingAdsDialog(activity);
@@ -306,6 +326,7 @@ public class InterstitialAdManager {
                                              ArrayList<String> interstitialAdIds,
                                              AdFinished adFinished,
                                              LoadingAdsDialog loadingAdsDialog) {
+        final long loadStartTime = System.currentTimeMillis();
         Runnable showNextScreen = () -> {
             if (!loadingAdsDialog.isTimedOut()) {
                 adFinished.onAdFinished();
@@ -320,9 +341,13 @@ public class InterstitialAdManager {
                     @Override
                     public void onResultInterstitialAd(ApInterstitialAd interstitialAd) {
                         super.onResultInterstitialAd(interstitialAd);
+                        long latency = System.currentTimeMillis() - loadStartTime;
                         if (loadingAdsDialog.isTimedOut()) return;
                         loadingAdsDialog.dismiss();
-                        show(activity, interstitialAd.getInterstitialAd(), showNextScreen);
+                        InterstitialAd ad = interstitialAd.getInterstitialAd();
+                        FirebaseAnalyticsEvents.getInstance().logLoadSuccess(activity, placementKey,
+                                ad != null ? ad.getAdUnitId() : null, AdType.INTERSTITIAL, latency);
+                        showTracked(activity, placementKey, ad, showNextScreen);
                     }
 
                     @Override
@@ -335,6 +360,12 @@ public class InterstitialAdManager {
                     @Override
                     public void onAdFailedToLoad(ApAdError i) {
                         super.onAdFailedToLoad(i);
+                        long latency = System.currentTimeMillis() - loadStartTime;
+                        int errCode = i != null && i.getLoadAdError() != null ? i.getLoadAdError().getCode() : -1;
+                        String errMsg = i != null ? i.getMessage() : "unknown";
+                        FirebaseAnalyticsEvents.getInstance().logLoadFailed(activity, placementKey,
+                                interstitialAdIds.isEmpty() ? null : interstitialAdIds.get(0),
+                                AdType.INTERSTITIAL, errCode, errMsg, latency);
                         if (loadingAdsDialog.isTimedOut()) return;
 
                         // Try default fallback pool first
@@ -342,7 +373,9 @@ public class InterstitialAdManager {
                                 .consumeDefaultInterstitialAd(activity);
                         if (defaultAd != null) {
                             loadingAdsDialog.dismiss();
-                            show(activity, defaultAd, showNextScreen);
+                            FirebaseAnalyticsEvents.getInstance().logFallbackUsed(activity, placementKey,
+                                    defaultAd.getAdUnitId(), AdType.INTERSTITIAL, "default_pool");
+                            showTracked(activity, placementKey, defaultAd, showNextScreen);
                             return;
                         }
 
@@ -350,6 +383,8 @@ public class InterstitialAdManager {
                         PlacementConfig pc = placementConfigMap.get(placementKey);
                         if (pc != null && pc.hasBackupNative()) {
                             loadingAdsDialog.dismiss();
+                            FirebaseAnalyticsEvents.getInstance().logFallbackUsed(activity, placementKey,
+                                    null, AdType.INTERSTITIAL, "native_backup");
                             // Launch full-screen native as fallback
                             com.adoreapps.ai.ads.dialog.FullScreenNativeAdActivity.show(
                                     activity,
@@ -408,5 +443,59 @@ public class InterstitialAdManager {
         } else {
             if (showNextScreen != null) showNextScreen.run();
         }
+    }
+
+    /**
+     * Show interstitial with placement-aware analytics events.
+     * Fires: ad_show, ad_show_failed, ad_click, ad_dismissed.
+     */
+    private void showTracked(Activity activity, String placementKey, InterstitialAd interstitialAd,
+                              Runnable showNextScreen) {
+        if (interstitialAd == null) {
+            FirebaseAnalyticsEvents.getInstance().logShowFailed(activity, placementKey,
+                    null, AdType.INTERSTITIAL, -1, "ad_is_null");
+            if (showNextScreen != null) showNextScreen.run();
+            return;
+        }
+        final String adUnitId = interstitialAd.getAdUnitId();
+        AdsMobileAdsManager.getInstance().showInterstitial(
+                activity,
+                interstitialAd,
+                new AdCallback() {
+                    @Override
+                    public void onAdShowedFullScreenContent() {
+                        super.onAdShowedFullScreenContent();
+                        FirebaseAnalyticsEvents.getInstance().logShow(activity, placementKey,
+                                adUnitId, AdType.INTERSTITIAL);
+                    }
+
+                    @Override
+                    public void onAdClicked() {
+                        super.onAdClicked();
+                        FirebaseAnalyticsEvents.getInstance().logClick(activity, placementKey,
+                                adUnitId, AdType.INTERSTITIAL);
+                    }
+
+                    @Override
+                    public void onNextScreen() {
+                        super.onNextScreen();
+                        FirebaseAnalyticsEvents.getInstance().logDismissed(activity, placementKey,
+                                adUnitId, AdType.INTERSTITIAL);
+                        startCooldown(activity);
+                        if (showNextScreen != null) showNextScreen.run();
+                    }
+
+                    @Override
+                    public void onAdFailedToShowFullScreenContent(ApAdError apAdError) {
+                        super.onAdFailedToShowFullScreenContent(apAdError);
+                        int code = apAdError != null && apAdError.getLoadAdError() != null
+                                ? apAdError.getLoadAdError().getCode() : -1;
+                        String msg = apAdError != null ? apAdError.getMessage() : "unknown";
+                        FirebaseAnalyticsEvents.getInstance().logShowFailed(activity, placementKey,
+                                adUnitId, AdType.INTERSTITIAL, code, msg);
+                        if (showNextScreen != null) showNextScreen.run();
+                    }
+                }
+        );
     }
 }

@@ -17,6 +17,8 @@ import com.adoreapps.ai.ads.wrapper.ApAdError;
 import com.adoreapps.ai.ads.wrapper.ApRewardItem;
 import com.adoreapps.ai.ads.consent.ConsentManager;
 import com.adoreapps.ai.ads.billing.PurchaseManager;
+import com.adoreapps.ai.ads.event.AdType;
+import com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents;
 import com.adoreapps.ai.ads.interfaces.AdFinished;
 import com.adoreapps.ai.ads.dialog.LoadingAdsDialog;
 import com.google.android.gms.ads.LoadAdError;
@@ -102,6 +104,20 @@ public class RewardAdManager {
     public void loadAndShowByPlacement(Activity activity, String placementKey, AdFinished adFinished) {
         AdUnitsConfig config = rewardAdMap.get(placementKey);
         if (config == null || config.adUnitIds.isEmpty()) {
+            FirebaseAnalyticsEvents.getInstance().logShowBlocked(activity, placementKey,
+                    AdType.REWARDED, "no_placement");
+            adFinished.onAdFailed();
+            return;
+        }
+        if (PurchaseManager.getInstance().isPurchased()) {
+            FirebaseAnalyticsEvents.getInstance().logShowBlocked(activity, placementKey,
+                    AdType.REWARDED, "premium");
+            adFinished.onAdFinished();
+            return;
+        }
+        if (!ConsentManager.getInstance(activity).canRequestAds()) {
+            FirebaseAnalyticsEvents.getInstance().logShowBlocked(activity, placementKey,
+                    AdType.REWARDED, "no_consent");
             adFinished.onAdFailed();
             return;
         }
@@ -111,7 +127,9 @@ public class RewardAdManager {
         com.google.android.gms.ads.rewarded.RewardedAd preloaded =
                 AdPreloadManager.getInstance().pollReward(activity.getApplicationContext(), placementKey);
         if (preloaded != null) {
-            AdCallback cb = buildRewardCallback(activity, adFinished, null);
+            FirebaseAnalyticsEvents.getInstance().logCacheHit(activity, placementKey,
+                    preloaded.getAdUnitId(), AdType.REWARDED);
+            AdCallback cb = buildRewardCallback(activity, placementKey, adFinished, null);
             AdsMobileAdsManager.getInstance().showRewardAd(activity, preloaded, cb);
             return;
         }
@@ -123,19 +141,40 @@ public class RewardAdManager {
             ids = new ArrayList<>();
             ids.add(config.adUnitIds.get(0));
         }
-        loadAndShowRewardAdWithIds(activity, ids, adFinished);
+        if (!ids.isEmpty()) {
+            FirebaseAnalyticsEvents.getInstance().logRequest(activity, placementKey,
+                    ids.get(0), AdType.REWARDED);
+        }
+        loadAndShowRewardAdWithIds(activity, placementKey, ids, adFinished);
     }
 
     /**
      * Build the reward AdCallback used when showing a preloaded reward ad.
      * Separated so we can reuse the callback construction.
      */
-    private AdCallback buildRewardCallback(Activity activity, AdFinished onRewardComplete,
-                                            LoadingAdsDialog loadingAdsDialog) {
-        return new AdCallback() {
+    private RewardCallback buildRewardCallback(final Activity activity, final String placementKey,
+                                            final AdFinished onRewardComplete,
+                                            final LoadingAdsDialog loadingAdsDialog) {
+        return new RewardCallback() {
+            @Override
+            public void onAdShowedFullScreenContent() {
+                super.onAdShowedFullScreenContent();
+                FirebaseAnalyticsEvents.getInstance().logShow(activity, placementKey,
+                        adUnitId, AdType.REWARDED);
+            }
+
+            @Override
+            public void onAdClicked() {
+                super.onAdClicked();
+                FirebaseAnalyticsEvents.getInstance().logClick(activity, placementKey,
+                        adUnitId, AdType.REWARDED);
+            }
+
             @Override
             public void onAdDismissedFullScreenContent() {
                 super.onAdDismissedFullScreenContent();
+                FirebaseAnalyticsEvents.getInstance().logDismissed(activity, placementKey,
+                        adUnitId, AdType.REWARDED);
                 if (loadingAdsDialog != null) loadingAdsDialog.dismiss();
                 if (isUserEarnedReward) {
                     onRewardComplete.onAdFinished();
@@ -148,11 +187,18 @@ public class RewardAdManager {
             public void onUserEarnedReward(ApRewardItem rewardItem) {
                 super.onUserEarnedReward(rewardItem);
                 isUserEarnedReward = true;
+                FirebaseAnalyticsEvents.getInstance().logRewardEarned(activity, placementKey,
+                        adUnitId,
+                        rewardItem != null ? rewardItem.getType() : null,
+                        rewardItem != null ? rewardItem.getAmount() : 0);
             }
 
             @Override
             public void onAdFailedToShowFullScreenContent(@androidx.annotation.NonNull ApAdError apAdError) {
                 super.onAdFailedToShowFullScreenContent(apAdError);
+                int code = apAdError.getLoadAdError() != null ? apAdError.getLoadAdError().getCode() : -1;
+                FirebaseAnalyticsEvents.getInstance().logShowFailed(activity, placementKey,
+                        adUnitId, AdType.REWARDED, code, apAdError.getMessage());
                 if (loadingAdsDialog != null) loadingAdsDialog.dismiss();
                 onRewardComplete.onAdFailed();
             }
@@ -366,7 +412,8 @@ public class RewardAdManager {
     /**
      * Load and show a reward ad from a list of ad unit IDs (placement-based).
      */
-    private void loadAndShowRewardAdWithIds(Activity activity, ArrayList<String> adIds, AdFinished onRewardComplete) {
+    private void loadAndShowRewardAdWithIds(Activity activity, String placementKey,
+                                             ArrayList<String> adIds, AdFinished onRewardComplete) {
         if (PurchaseManager.getInstance().isPurchased()) {
             onRewardComplete.onAdFinished();
             return;
@@ -376,37 +423,10 @@ public class RewardAdManager {
             return;
         }
 
-        LoadingAdsDialog loadingAdsDialog = new LoadingAdsDialog(activity);
+        final long loadStartTime = System.currentTimeMillis();
+        final LoadingAdsDialog loadingAdsDialog = new LoadingAdsDialog(activity);
         loadingAdsDialog.showWithTimeout(() -> onRewardComplete.onAdFailed());
-        AdCallback adCallBack = new AdCallback() {
-            @Override
-            public void onAdDismissedFullScreenContent() {
-                super.onAdDismissedFullScreenContent();
-                loadingAdsDialog.dismiss();
-                if (!loadingAdsDialog.isTimedOut()) {
-                    if (isUserEarnedReward) {
-                        onRewardComplete.onAdFinished();
-                    } else {
-                        onRewardComplete.onAdFailed();
-                    }
-                }
-            }
-
-            @Override
-            public void onUserEarnedReward(ApRewardItem rewardItem) {
-                super.onUserEarnedReward(rewardItem);
-                isUserEarnedReward = true;
-            }
-
-            @Override
-            public void onAdFailedToShowFullScreenContent(@NonNull ApAdError apAdError) {
-                super.onAdFailedToShowFullScreenContent(apAdError);
-                loadingAdsDialog.dismiss();
-                if (!loadingAdsDialog.isTimedOut()) {
-                    onRewardComplete.onAdFailed();
-                }
-            }
-        };
+        final AdCallback rewardCallback = buildRewardCallback(activity, placementKey, onRewardComplete, loadingAdsDialog);
 
         AdsMobileAdsManager.getInstance().loadAlternateRewardAd(
                 activity,
@@ -415,11 +435,19 @@ public class RewardAdManager {
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
                         super.onAdFailedToLoad(loadAdError);
+                        long latency = System.currentTimeMillis() - loadStartTime;
+                        FirebaseAnalyticsEvents.getInstance().logLoadFailed(activity, placementKey,
+                                adIds.isEmpty() ? null : adIds.get(0), AdType.REWARDED,
+                                loadAdError.getCode(), loadAdError.getMessage(), latency);
                         if (loadingAdsDialog.isTimedOut()) return;
                         RewardedAd defaultAd = DefaultAdPool.getInstance().consumeDefaultRewardAd(activity);
                         if (defaultAd != null) {
+                            FirebaseAnalyticsEvents.getInstance().logFallbackUsed(activity, placementKey,
+                                    defaultAd.getAdUnitId(), AdType.REWARDED, "default_pool");
                             loadingAdsDialog.dismiss();
-                            AdsMobileAdsManager.getInstance().showRewardAd(activity, defaultAd, adCallBack);
+                            // Set the adUnitId in the callback so subsequent events have it
+                            ((RewardCallback) rewardCallback).adUnitId = defaultAd.getAdUnitId();
+                            AdsMobileAdsManager.getInstance().showRewardAd(activity, defaultAd, rewardCallback);
                         } else {
                             loadingAdsDialog.dismiss();
                             onRewardComplete.onAdFailed();
@@ -429,12 +457,24 @@ public class RewardAdManager {
                     @Override
                     public void onAdLoaded(@NonNull RewardedAd rewardedAd) {
                         super.onAdLoaded(rewardedAd);
+                        long latency = System.currentTimeMillis() - loadStartTime;
+                        FirebaseAnalyticsEvents.getInstance().logLoadSuccess(activity, placementKey,
+                                rewardedAd.getAdUnitId(), AdType.REWARDED, latency);
                         if (loadingAdsDialog.isTimedOut()) return;
                         loadingAdsDialog.dismiss();
-                        AdsMobileAdsManager.getInstance().showRewardAd(activity, rewardedAd, adCallBack);
+                        ((RewardCallback) rewardCallback).adUnitId = rewardedAd.getAdUnitId();
+                        AdsMobileAdsManager.getInstance().showRewardAd(activity, rewardedAd, rewardCallback);
                     }
                 }
         );
+    }
+
+    /**
+     * Marker subclass so we can set adUnitId after construction.
+     * (The reward callback is built before we know which ad will actually load.)
+     */
+    private abstract static class RewardCallback extends AdCallback {
+        String adUnitId;
     }
 
     // =========================================================

@@ -30,7 +30,7 @@ com.adoreapps.ai.ads/
 │   └── PurchaseManager.java       <- Google Play Billing, premium check
 │
 ├── event/
-│   ├── FirebaseAnalyticsEvents.java <- Ad request/impression/click/revenue tracking
+│   ├── FirebaseAnalyticsEvents.java <- Per-placement funnel events (request/load/show/impression/click/dismissed/blocked/...). Nested AdEvent constants class
 │   ├── AdjustEvents.java          <- Adjust attribution events
 │   └── AdType.java                <- NATIVE, INTERSTITIAL, REWARDED, BANNER, APP_OPEN
 │
@@ -39,6 +39,7 @@ com.adoreapps.ai.ads/
 │   ├── AdSettingsStore.java       <- Thread-safe SharedPreferences wrapper (refresh interval updated by remote config)
 │   ├── AdsConfig.java             <- Production ad unit IDs (immutable)
 │   ├── AdUnitsConfig.java         <- List<adUnitIds> + analytics event names
+│   ├── CollapsibleAnchor.java     <- (v1.5.5) NONE, TOP, BOTTOM enum for collapsible banner anchor
 │   └── AdStatus.java              <- IDLE, LOADING, LOADED, FAILED
 │
 ├── wrapper/
@@ -361,6 +362,81 @@ InterstitialAdManager.getInstance().loadAndShowByPlacement(
 - Removes expiry tracking
 - Stops any active auto-refresh for that placement
 
+## Collapsible Banners (v1.5.5)
+
+Per-placement support for AdMob collapsible banners, anchored to the top or bottom of the screen.
+
+### Flow
+
+```
+PlacementConfig.collapsibleAnchor (NONE | TOP | BOTTOM)
+   '-- BannerAdManager.populateFromConfig() reads it
+       '-- Stored in BannerAdManager.collapsibleAnchorMap (placementKey -> CollapsibleAnchor)
+           '-- loadAndShowBannerAd("BANNER_HOME", ...)
+               '-- Looks up anchor for placement
+                   '-- AdsMobileAdsManager.loadBanner(..., position)
+                       '-- AdsMobileAdsManager.getAdRequest(position)
+                           '-- new AdRequest.Builder()
+                                .addNetworkExtrasBundle(AdMobAdapter.class,
+                                    Bundle{"collapsible": "top"|"bottom"})
+                                .build()
+```
+
+The waterfall preserves the anchor across all ad unit IDs in the placement (high floor, low floor, default fallback).
+
+### Touch points
+
+| File | Change |
+|------|--------|
+| `settings/CollapsibleAnchor.java` | New enum (NONE, TOP, BOTTOM) |
+| `PlacementConfig.java` | New `collapsibleAnchor` field, builder `setCollapsibleAnchor(...)` |
+| `BannerAdManager.java` | `collapsibleAnchorMap` populated from `PlacementConfig`; runtime `setCollapsibleAnchor(key, anchor)` |
+| `AdsMobileAdsManager.java` | New `getAdRequest(String position)` overload; `loadBanner` / `loadAlternateBanner` accept the position string |
+
+Standard banners (anchor = NONE) skip the `addNetworkExtrasBundle` call entirely — behavior is unchanged.
+
+## Firebase Analytics Pipeline (v1.5.4)
+
+Every manager emits a per-placement funnel event from its lifecycle callbacks. Events are uniformly tagged so they can be queried in Firebase Console with a single `placement_key` filter.
+
+### Pipeline
+
+```
+Manager (Interstitial/Reward/Native/Banner/AppOpen)
+  '-- Lifecycle callback (onAdLoaded, onAdImpression, onAdFailedToLoad, ...)
+      '-- FirebaseAnalyticsEvents.getInstance().logXxx(
+              ctx, placementKey, adUnitId, AdType, ...extra)
+          '-- logPlacementEvent(ctx, eventName, bundle)
+              |-- bundle puts: placement_key, ad_format, ad_unit_id, ad_platform="admob_sdk"
+              '-- FirebaseAnalytics.getInstance(ctx).logEvent(eventName, bundle)
+```
+
+Helper methods live in `event/FirebaseAnalyticsEvents.java` (~lines 378-457): `logAdRequest`, `logAdLoadSuccess`, `logAdLoadFailed`, `logAdShow`, `logAdShowFailed`, `logAdImpression`, `logAdClick`, `logAdDismissed`, `logAdRewardEarned`, `logAdCacheHit`, `logAdFallbackUsed`, `logAdShowBlocked`, `logAdSkipped`.
+
+Event name constants live in the nested `FirebaseAnalyticsEvents.AdEvent` class (e.g. `AdEvent.AD_REQUEST`, `AdEvent.AD_SHOW_BLOCKED`).
+
+### Wired managers
+
+| Manager | Placement key source |
+|---------|---------------------|
+| `InterstitialAdManager` | `loadAndShowByPlacement(key)` arg |
+| `RewardAdManager` | `loadAndShowByPlacement(key)` arg |
+| `NativeAdManager` | placement key passed to `load`/`showWithAutoRefresh` |
+| `BannerAdManager` | placement key passed to `loadAndShowBannerAd` |
+| `AppOpenAdManager` | hardcoded constant `APP_OPEN_RESUME` |
+| `FullScreenNativeAdActivity` | placement key passed to `show(...)` (also fires `ad_skipped`) |
+
+### Adding a new event
+
+1. Add the event name constant to `FirebaseAnalyticsEvents.AdEvent`:
+   ```java
+   public static final String AD_MY_NEW_EVENT = "ad_my_new_event";
+   ```
+2. Add a helper method on `FirebaseAnalyticsEvents` that builds the param bundle and calls `logPlacementEvent(ctx, AdEvent.AD_MY_NEW_EVENT, bundle)`. Keep the same `(context, placementKey, adUnitId, AdType, ...)` signature shape as siblings.
+3. Call it from the appropriate manager lifecycle callback.
+
+The common params (`placement_key`, `ad_format`, `ad_unit_id`, `ad_platform`) are added inside `logPlacementEvent` — helpers only need to add their event-specific extras.
+
 ## Configuration
 
 ### Builder-based (recommended)
@@ -461,7 +537,7 @@ export GITHUB_OWNER=adoreapps  # GitHub org or user
 ### Version Bump
 Edit `ads/build.gradle`:
 ```groovy
-version = '1.1.0'  // Change here
+version = '1.5.5'  // Change here
 ```
 
 ## Dependencies Included

@@ -22,11 +22,32 @@ import java.util.List;
  */
 public class NativeAdCarouselAdapter extends RecyclerView.Adapter<NativeAdCarouselAdapter.CarouselViewHolder> {
 
+    /** Large "infinite" size. Starting position is the middle so the user can swipe either direction. */
+    private static final int VIRTUAL_COUNT = 1_000_000;
+    private static final int VIRTUAL_START = VIRTUAL_COUNT / 2;
+
     private final List<NativeAd> ads = new ArrayList<>();
     @LayoutRes private final int layoutId;
+    private boolean circular = false;
 
     public NativeAdCarouselAdapter(@LayoutRes int layoutId) {
         this.layoutId = layoutId;
+    }
+
+    public void setCircular(boolean circular) {
+        this.circular = circular;
+        notifyDataSetChanged();
+    }
+
+    public boolean isCircular() {
+        return circular;
+    }
+
+    /** Starting item position for the ViewPager2. Middle position in circular mode, 0 otherwise. */
+    public int getStartPosition() {
+        if (!circular || ads.isEmpty()) return 0;
+        // Start at a multiple of ads.size() near the middle so setCurrentItem(startPos + 1) works
+        return VIRTUAL_START - (VIRTUAL_START % ads.size());
     }
 
     /**
@@ -69,8 +90,10 @@ public class NativeAdCarouselAdapter extends RecyclerView.Adapter<NativeAdCarous
 
     @Override
     public void onBindViewHolder(@NonNull CarouselViewHolder holder, int position) {
-        if (position < 0 || position >= ads.size()) return;
-        NativeAd ad = ads.get(position);
+        if (ads.isEmpty()) return;
+        int realPosition = circular ? (position % ads.size()) : position;
+        if (realPosition < 0 || realPosition >= ads.size()) return;
+        NativeAd ad = ads.get(realPosition);
         FrameLayout container = (FrameLayout) holder.itemView;
         container.removeAllViews();
         NativeAdView adView = AdsMobileAdsManager.getInstance()
@@ -80,7 +103,8 @@ public class NativeAdCarouselAdapter extends RecyclerView.Adapter<NativeAdCarous
 
     @Override
     public int getItemCount() {
-        return ads.size();
+        if (ads.isEmpty()) return 0;
+        return circular ? VIRTUAL_COUNT : ads.size();
     }
 
     static class CarouselViewHolder extends RecyclerView.ViewHolder {

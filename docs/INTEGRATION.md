@@ -40,7 +40,7 @@ In your app's `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'com.adoreapps.ai:ads:1.2.0'
+    implementation 'com.adoreapps.ai:ads:1.5.5'
 }
 ```
 
@@ -301,6 +301,26 @@ Type: String
 Values: BANNER | LARGE_BANNER | MEDIUM_RECTANGLE | FULL_BANNER | LEADERBOARD | ADAPTIVE | ADAPTIVE_LARGE | INLINE_ADAPTIVE
 ```
 
+#### Collapsible banners (v1.5.5)
+
+For [AdMob collapsible banners](https://developers.google.com/ad-manager/mobile-ads-sdk/android/banner/collapsible), set the anchor per placement. Standard banners are unaffected when the anchor is `NONE` (default).
+
+```java
+// At config time
+.addBannerPlacement("BANNER_HOME", new PlacementConfig.Builder()
+    .setAdUnitIds(Arrays.asList("ca-app-pub-.../banner_high", "ca-app-pub-.../banner_low"))
+    .setCollapsibleAnchor(CollapsibleAnchor.BOTTOM)   // NONE | TOP | BOTTOM
+    .setEnabled(true)
+    .build())
+```
+
+```java
+// Or at runtime
+BannerAdManager.getInstance().setCollapsibleAnchor("BANNER_HOME", CollapsibleAnchor.BOTTOM);
+```
+
+When the anchor is non-NONE, the SDK adds the `collapsible` network extra to every ad unit ID in the placement waterfall.
+
 ### App Open Ads
 
 ```java
@@ -434,6 +454,40 @@ AdjustEvents.getInstance().setTokens("your_ad_impression_token", "your_purchase_
 // After your own FirebaseRemoteConfig.fetchAndActivate()
 AdoreAds.getInstance().applyRemoteConfig();
 ```
+
+---
+
+### Analytics events (v1.5.4)
+
+Every ad manager auto-fires Firebase Analytics events tagged with the placement key. No app-side wiring is required — events fire automatically once `AdoreAds.init(...)` runs and a Firebase `google-services.json` is present.
+
+**Common params on every event:** `placement_key`, `ad_format`, `ad_unit_id`, `ad_platform` (= `"admob_sdk"`).
+
+**Event taxonomy:**
+
+| Event | When fired | Extra params |
+|---|---|---|
+| `ad_request` | About to call AdMob load | — |
+| `ad_load_success` | Load callback success | `latency_ms` |
+| `ad_load_failed` | Load callback failure | `error_code`, `error_message`, `latency_ms` |
+| `ad_show` | Show called / shown | — |
+| `ad_show_failed` | `onAdFailedToShowFullScreenContent` | `error_code`, `error_message` |
+| `ad_impression` | `onAdImpression` | — |
+| `ad_click` | `onAdClicked` | — |
+| `ad_dismissed` | `onAdDismissedFullScreenContent` | — |
+| `ad_reward_earned` | Reward callback | `reward_type`, `reward_amount` |
+| `ad_cache_hit` | Preloaded ad served | — |
+| `ad_fallback_used` | Default pool / native backup served | `fallback_type` (`default_pool` \| `native_backup`) |
+| `ad_show_blocked` | Show prevented | `block_reason` (`premium` \| `no_consent` \| `cooldown` \| `no_ad_units` \| `activity_destroyed` \| `no_placement`) |
+| `ad_skipped` | User skipped full-screen native | `seconds_before_skip` |
+
+Wired managers: `InterstitialAdManager`, `RewardAdManager`, `NativeAdManager`, `BannerAdManager`, `AppOpenAdManager` (uses placement key `APP_OPEN_RESUME`), and `FullScreenNativeAdActivity`.
+
+**Example Firebase Console queries:**
+
+- Funnel by placement — filter `ad_request` / `ad_load_success` / `ad_show` / `ad_impression` by `placement_key = "INTER_HOME"`.
+- Latency p95 — aggregate `latency_ms` on `ad_load_success`, group by `placement_key`.
+- Block reasons — pivot `ad_show_blocked` by `block_reason`.
 
 ---
 

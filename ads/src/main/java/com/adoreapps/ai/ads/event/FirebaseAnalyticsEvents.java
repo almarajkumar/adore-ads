@@ -313,6 +313,154 @@ public class FirebaseAnalyticsEvents {
         }
     }
 
+    // =========================================================
+    // PLACEMENT-AWARE ANALYTICS (v1.5.4)
+    // Standard ad lifecycle events with placement_key for funnel analysis.
+    // Filter Firebase Analytics by placement_key to see per-position metrics.
+    // =========================================================
+
+    public static final class AdEvent {
+        public static final String REQUEST       = "ad_request";        // load started
+        public static final String LOAD_SUCCESS  = "ad_load_success";   // load filled
+        public static final String LOAD_FAILED   = "ad_load_failed";    // load error
+        public static final String SHOW          = "ad_show";           // ad displayed
+        public static final String SHOW_FAILED   = "ad_show_failed";    // show error
+        public static final String IMPRESSION    = "ad_impression";     // viewable
+        public static final String CLICK         = "ad_click";          // user clicked
+        public static final String DISMISSED     = "ad_dismissed";      // user closed
+        public static final String REWARD_EARNED = "ad_reward_earned";  // reward granted
+        public static final String CACHE_HIT     = "ad_cache_hit";      // preload used
+        public static final String FALLBACK_USED = "ad_fallback_used";  // pool/backup used
+        public static final String SHOW_BLOCKED  = "ad_show_blocked";   // gated by cooldown/premium/etc.
+        public static final String SKIPPED       = "ad_skipped";        // user skipped
+        private AdEvent() {}
+    }
+
+    /**
+     * Log a placement-aware ad event with standard fields.
+     * <p>
+     * Common parameters logged:
+     * <ul>
+     *     <li>{@code placement_key} — e.g. "INTER_HOME"</li>
+     *     <li>{@code ad_format} — INTERSTITIAL / NATIVE / REWARDED / BANNER / APP_OPEN</li>
+     *     <li>{@code ad_unit_id} — actual AdMob ad unit ID</li>
+     *     <li>{@code ad_platform} — admob_sdk</li>
+     * </ul>
+     * Use {@link #logPlacementEvent(Context, String, String, String, AdType, Bundle)} to add extras
+     * (e.g. {@code error_code}, {@code latency_ms}, {@code fallback_type}, {@code block_reason}).
+     */
+    public void logPlacementEvent(Context ctx, String eventName, String placementKey,
+                                   String adUnitId, AdType adFormat) {
+        logPlacementEvent(ctx, eventName, placementKey, adUnitId, adFormat, null);
+    }
+
+    /**
+     * Log a placement-aware event with custom extras (error_code, latency_ms, etc.).
+     */
+    public void logPlacementEvent(Context ctx, String eventName, String placementKey,
+                                   String adUnitId, AdType adFormat, Bundle extras) {
+        Context c = ctx != null ? ctx : context;
+        if (c == null) return;
+        Bundle params = new Bundle();
+        if (extras != null) params.putAll(extras);
+        params.putString("placement_key", placementKey != null ? placementKey : "unknown");
+        params.putString("ad_format", adFormat != null ? adFormat.toString() : "unknown");
+        params.putString("ad_unit_id", adUnitId != null ? adUnitId : "unknown");
+        params.putString("ad_platform", AD_PLATFORM_ADMOB);
+        FirebaseAnalytics.getInstance(c).logEvent(eventName, params);
+
+        if (BuildLog.ENABLED) {
+            android.util.Log.d("AdEvent", eventName + " | placement=" + placementKey
+                    + " format=" + adFormat + " unit=" + adUnitId);
+        }
+    }
+
+    public void logRequest(Context ctx, String placementKey, String adUnitId, AdType adFormat) {
+        logPlacementEvent(ctx, AdEvent.REQUEST, placementKey, adUnitId, adFormat);
+    }
+
+    public void logLoadSuccess(Context ctx, String placementKey, String adUnitId, AdType adFormat, long latencyMs) {
+        Bundle b = new Bundle();
+        if (latencyMs >= 0) b.putLong("latency_ms", latencyMs);
+        logPlacementEvent(ctx, AdEvent.LOAD_SUCCESS, placementKey, adUnitId, adFormat, b);
+    }
+
+    public void logLoadFailed(Context ctx, String placementKey, String adUnitId, AdType adFormat,
+                               int errorCode, String errorMessage, long latencyMs) {
+        Bundle b = new Bundle();
+        b.putInt("error_code", errorCode);
+        b.putString("error_message", errorMessage != null ? errorMessage : "unknown");
+        if (latencyMs >= 0) b.putLong("latency_ms", latencyMs);
+        logPlacementEvent(ctx, AdEvent.LOAD_FAILED, placementKey, adUnitId, adFormat, b);
+    }
+
+    public void logShow(Context ctx, String placementKey, String adUnitId, AdType adFormat) {
+        logPlacementEvent(ctx, AdEvent.SHOW, placementKey, adUnitId, adFormat);
+    }
+
+    public void logShowFailed(Context ctx, String placementKey, String adUnitId, AdType adFormat,
+                               int errorCode, String errorMessage) {
+        Bundle b = new Bundle();
+        b.putInt("error_code", errorCode);
+        b.putString("error_message", errorMessage != null ? errorMessage : "unknown");
+        logPlacementEvent(ctx, AdEvent.SHOW_FAILED, placementKey, adUnitId, adFormat, b);
+    }
+
+    public void logImpression(Context ctx, String placementKey, String adUnitId, AdType adFormat) {
+        logPlacementEvent(ctx, AdEvent.IMPRESSION, placementKey, adUnitId, adFormat);
+    }
+
+    public void logClick(Context ctx, String placementKey, String adUnitId, AdType adFormat) {
+        logPlacementEvent(ctx, AdEvent.CLICK, placementKey, adUnitId, adFormat);
+    }
+
+    public void logDismissed(Context ctx, String placementKey, String adUnitId, AdType adFormat) {
+        logPlacementEvent(ctx, AdEvent.DISMISSED, placementKey, adUnitId, adFormat);
+    }
+
+    public void logRewardEarned(Context ctx, String placementKey, String adUnitId,
+                                 String rewardType, int rewardAmount) {
+        Bundle b = new Bundle();
+        b.putString("reward_type", rewardType != null ? rewardType : "unknown");
+        b.putInt("reward_amount", rewardAmount);
+        logPlacementEvent(ctx, AdEvent.REWARD_EARNED, placementKey, adUnitId, AdType.REWARDED, b);
+    }
+
+    public void logCacheHit(Context ctx, String placementKey, String adUnitId, AdType adFormat) {
+        logPlacementEvent(ctx, AdEvent.CACHE_HIT, placementKey, adUnitId, adFormat);
+    }
+
+    /**
+     * @param fallbackType "default_pool" | "native_backup" | "interstitial_fallback"
+     */
+    public void logFallbackUsed(Context ctx, String placementKey, String adUnitId,
+                                 AdType adFormat, String fallbackType) {
+        Bundle b = new Bundle();
+        b.putString("fallback_type", fallbackType != null ? fallbackType : "unknown");
+        logPlacementEvent(ctx, AdEvent.FALLBACK_USED, placementKey, adUnitId, adFormat, b);
+    }
+
+    /**
+     * @param blockReason "cooldown" | "premium" | "no_consent" | "ads_disabled" | "no_network" |
+     *                   "activity_destroyed" | "no_placement" | "disabled"
+     */
+    public void logShowBlocked(Context ctx, String placementKey, AdType adFormat, String blockReason) {
+        Bundle b = new Bundle();
+        b.putString("block_reason", blockReason != null ? blockReason : "unknown");
+        logPlacementEvent(ctx, AdEvent.SHOW_BLOCKED, placementKey, null, adFormat, b);
+    }
+
+    public void logSkipped(Context ctx, String placementKey, String adUnitId, AdType adFormat,
+                            long secondsBeforeSkip) {
+        Bundle b = new Bundle();
+        b.putLong("seconds_before_skip", secondsBeforeSkip);
+        logPlacementEvent(ctx, AdEvent.SKIPPED, placementKey, adUnitId, adFormat, b);
+    }
+
+    private static final class BuildLog {
+        static final boolean ENABLED = true;  // flip to false in production
+    }
+
     private static String logAdUnit(String adUnitId) {
         return adUnitId == null ? "null" : adUnitId;
     }

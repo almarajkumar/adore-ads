@@ -1,5 +1,6 @@
 package com.adoreapps.ai.ads;
 
+import com.adoreapps.ai.ads.settings.CollapsibleAnchor;
 import com.adoreapps.ai.ads.settings.LoadMode;
 
 import java.util.ArrayList;
@@ -37,6 +38,11 @@ public class PlacementConfig {
 
     // v1.5.2 — native ad carousel (slides through multiple ads)
     private int carouselSlideIntervalSeconds = 5;
+    private boolean carouselCircular = true;
+    private boolean carouselAutoRefreshEnabled = false;
+
+    // v1.5.5 — collapsible banner anchor (banner placements only)
+    private CollapsibleAnchor collapsibleAnchor = CollapsibleAnchor.NONE;
 
     public PlacementConfig(List<String> adUnitIds, boolean enabled,
                            String viewEventName, String clickEventName) {
@@ -63,6 +69,9 @@ public class PlacementConfig {
         this.backupNativePlacementKey = b.backupNativePlacementKey != null ? b.backupNativePlacementKey : "";
         this.backupCountdownSeconds = b.backupCountdownSeconds;
         this.carouselSlideIntervalSeconds = b.carouselSlideIntervalSeconds;
+        this.carouselCircular = b.carouselCircular;
+        this.carouselAutoRefreshEnabled = b.carouselAutoRefreshEnabled;
+        this.collapsibleAnchor = b.collapsibleAnchor != null ? b.collapsibleAnchor : CollapsibleAnchor.NONE;
     }
 
     // =========================================================
@@ -77,6 +86,9 @@ public class PlacementConfig {
     public String getBackupNativePlacementKey() { return backupNativePlacementKey; }
     public int getBackupCountdownSeconds() { return backupCountdownSeconds; }
     public int getCarouselSlideIntervalSeconds() { return carouselSlideIntervalSeconds; }
+    public boolean isCarouselCircular() { return carouselCircular; }
+    public boolean isCarouselAutoRefreshEnabled() { return carouselAutoRefreshEnabled; }
+    public CollapsibleAnchor getCollapsibleAnchor() { return collapsibleAnchor; }
 
     public boolean hasBackupNative() {
         return backupNativePlacementKey != null && !backupNativePlacementKey.isEmpty();
@@ -91,6 +103,11 @@ public class PlacementConfig {
     public void setBackupNativePlacementKey(String key) { this.backupNativePlacementKey = key != null ? key : ""; }
     public void setBackupCountdownSeconds(int seconds) { this.backupCountdownSeconds = Math.max(0, seconds); }
     public void setCarouselSlideIntervalSeconds(int seconds) { this.carouselSlideIntervalSeconds = Math.max(1, seconds); }
+    public void setCarouselCircular(boolean circular) { this.carouselCircular = circular; }
+    public void setCarouselAutoRefreshEnabled(boolean enabled) { this.carouselAutoRefreshEnabled = enabled; }
+    public void setCollapsibleAnchor(CollapsibleAnchor anchor) {
+        this.collapsibleAnchor = anchor != null ? anchor : CollapsibleAnchor.NONE;
+    }
 
     /**
      * Replace the ad unit IDs list (e.g. from remote config override).
@@ -115,6 +132,9 @@ public class PlacementConfig {
         private String backupNativePlacementKey = "";
         private int backupCountdownSeconds = 5;
         private int carouselSlideIntervalSeconds = 5;
+        private boolean carouselCircular = true;
+        private boolean carouselAutoRefreshEnabled = false;
+        private CollapsibleAnchor collapsibleAnchor = CollapsibleAnchor.NONE;
 
         public Builder setAdUnitIds(List<String> ids) {
             this.adUnitIds = ids != null ? new ArrayList<>(ids) : new ArrayList<>();
@@ -127,6 +147,19 @@ public class PlacementConfig {
         public Builder setBackupNativePlacementKey(String key) { this.backupNativePlacementKey = key; return this; }
         public Builder setBackupCountdownSeconds(int seconds) { this.backupCountdownSeconds = seconds; return this; }
         public Builder setCarouselSlideIntervalSeconds(int seconds) { this.carouselSlideIntervalSeconds = Math.max(1, seconds); return this; }
+        public Builder setCarouselCircular(boolean circular) { this.carouselCircular = circular; return this; }
+        public Builder setCarouselAutoRefreshEnabled(boolean enabled) { this.carouselAutoRefreshEnabled = enabled; return this; }
+        /**
+         * Enable collapsible banner mode (banner placements only).
+         * <p>Collapsible banners render at a larger expanded size on the first
+         * impression then collapse to the standard anchored size. Set the anchor
+         * to control which edge the expanded portion grows from.
+         * <p>See: <a href="https://developers.google.com/ad-manager/mobile-ads-sdk/android/banner/collapsible">Collapsible banners</a>
+         */
+        public Builder setCollapsibleAnchor(CollapsibleAnchor anchor) {
+            this.collapsibleAnchor = anchor != null ? anchor : CollapsibleAnchor.NONE;
+            return this;
+        }
 
         public PlacementConfig build() {
             return new PlacementConfig(this);

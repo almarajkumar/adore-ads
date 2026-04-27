@@ -7,6 +7,7 @@ import com.adoreapps.ai.ads.settings.AdConstants;
 import com.adoreapps.ai.ads.settings.AdSettingsStore;
 import com.adoreapps.ai.ads.settings.AdsConfig;
 import com.adoreapps.ai.ads.settings.BannerSize;
+import com.adoreapps.ai.ads.settings.CollapsibleAnchor;
 import com.adoreapps.ai.ads.core.AdsMobileAdsManager;
 import com.google.android.gms.ads.AdSize;
 
@@ -28,6 +29,7 @@ public class BannerAdManager {
 
     private final Map<String, AdUnitsConfig> bannerAdMap = new HashMap<>();
     private final Map<String, BannerSize> bannerSizeMap = new HashMap<>();
+    private final Map<String, CollapsibleAnchor> collapsibleAnchorMap = new HashMap<>();
     private BannerSize defaultBannerSize = BannerSize.ADAPTIVE_LARGE;
 
     public static final String BANNER_SPLASH = "BANNER_SPLASH";
@@ -64,6 +66,24 @@ public class BannerAdManager {
         return size != null ? size : defaultBannerSize;
     }
 
+    /**
+     * Set the collapsible banner anchor for a placement. Pass
+     * {@link CollapsibleAnchor#NONE} (or null) to disable.
+     */
+    public void setCollapsibleAnchor(String placement, CollapsibleAnchor anchor) {
+        if (placement == null) return;
+        if (anchor == null || anchor == CollapsibleAnchor.NONE) {
+            collapsibleAnchorMap.remove(placement);
+        } else {
+            collapsibleAnchorMap.put(placement, anchor);
+        }
+    }
+
+    public CollapsibleAnchor getCollapsibleAnchor(String placement) {
+        CollapsibleAnchor a = collapsibleAnchorMap.get(placement);
+        return a != null ? a : CollapsibleAnchor.NONE;
+    }
+
     private static volatile BannerAdManager instance;
     public static synchronized BannerAdManager getInstance() {
         if (instance == null) {
@@ -86,6 +106,7 @@ public class BannerAdManager {
                     config.getViewEventName(),
                     config.getClickEventName()
             ));
+            setCollapsibleAnchor(key, config.getCollapsibleAnchor());
         }
     }
 
@@ -143,6 +164,7 @@ public class BannerAdManager {
      */
     public void populateFromConfig(AdoreAdsConfig config) {
         bannerAdMap.clear();
+        collapsibleAnchorMap.clear();
         for (java.util.Map.Entry<String, PlacementConfig> entry : config.getBannerPlacements().entrySet()) {
             PlacementConfig pc = entry.getValue();
             if (pc.isEnabled() && !pc.getAdUnitIds().isEmpty()) {
@@ -151,6 +173,7 @@ public class BannerAdManager {
                         pc.getViewEventName(),
                         pc.getClickEventName()
                 ));
+                setCollapsibleAnchor(entry.getKey(), pc.getCollapsibleAnchor());
             }
         }
     }
@@ -165,10 +188,14 @@ public class BannerAdManager {
     public void loadAndShowBannerAd(Activity activity, String placement,
                                      FrameLayout bannerAdView, BannerSize size) {
         if (PurchaseManager.getInstance().isPurchased()) {
+            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logShowBlocked(
+                    activity, placement, com.adoreapps.ai.ads.event.AdType.BANNER, "premium");
             bannerAdView.setVisibility(View.GONE);
             return;
         }
         if (!ConsentManager.getInstance(activity).canRequestAds()) {
+            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logShowBlocked(
+                    activity, placement, com.adoreapps.ai.ads.event.AdType.BANNER, "no_consent");
             bannerAdView.setVisibility(View.GONE);
             return;
         }
@@ -186,15 +213,29 @@ public class BannerAdManager {
             }
         }
         if (!bannerAdIds.isEmpty()) {
+            // Fire request event
+            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logRequest(activity,
+                    placement, bannerAdIds.get(0), com.adoreapps.ai.ads.event.AdType.BANNER);
+
             BannerSize finalSize = size != null ? size : defaultBannerSize;
             AdSize adSize = finalSize.toAdSize(activity);
+            final long loadStart = System.currentTimeMillis();
+            final String firstId = bannerAdIds.get(0);
+            CollapsibleAnchor anchor = getCollapsibleAnchor(placement);
             AdsMobileAdsManager.getInstance().loadAlternateBanner(
                     activity,
                     bannerAdIds,
                     bannerAdView,
-                    adSize
+                    adSize,
+                    anchor.value()
             );
+            // Note: AdsMobileAdsManager.loadAlternateBanner internally tracks success via
+            // its own AdListener but doesn't expose load success/fail callbacks back here.
+            // For full success/fail tracking, that path would need a callback param.
+            // For now, request is tracked here; load_success/failed need core-level wiring.
         } else {
+            com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logShowBlocked(activity,
+                    placement, com.adoreapps.ai.ads.event.AdType.BANNER, "no_ad_units");
             bannerAdView.setVisibility(View.GONE);
         }
     }
