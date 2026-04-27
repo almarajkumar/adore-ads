@@ -102,6 +102,16 @@ public class RewardAdManager {
      * Load and show a reward ad by placement key (registered via addPlacement or config).
      */
     public void loadAndShowByPlacement(Activity activity, String placementKey, AdFinished adFinished) {
+        // v1.5.6 — null + lifecycle guards
+        if (adFinished == null) adFinished = new AdFinished() {
+            @Override public void onAdFinished() {}
+            @Override public void onAdFailed() {}
+        };
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
+            android.util.Log.w("RewardAdManager", "loadAndShowByPlacement: activity not usable");
+            adFinished.onAdFailed();
+            return;
+        }
         AdUnitsConfig config = rewardAdMap.get(placementKey);
         if (config == null || config.adUnitIds.isEmpty()) {
             FirebaseAnalyticsEvents.getInstance().logShowBlocked(activity, placementKey,

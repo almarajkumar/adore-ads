@@ -57,6 +57,17 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
     private long appOpenLoadStart = 0L;
     public static final String PLACEMENT_APP_OPEN = "APP_OPEN_RESUME";
 
+    // v1.5.6 — policy compliance: AdMob requires cached app open ads to expire after 4h
+    private static final long AD_EXPIRY_MS = 4L * 60 * 60 * 1000;   // 4 hours
+    // v1.5.6 — minimum interval between two app-open shows to avoid foreground-bounce abuse
+    private long minShowIntervalMs = 30_000L;                       // 30s default
+    private long lastShownAtMs = 0L;
+    // v1.5.6 — skip first foreground (cold start) — splash should own first impression
+    private boolean coldStartConsumed = false;
+    // v1.5.6 — exponential backoff state
+    private int waterfallRetryAttempt = 0;
+    private long waterfallBlockedUntilMs = 0L;
+
     private AppOpenAdManager() {
     }
 
@@ -156,9 +167,23 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
         }
 
         if (!this.isAdAvailable() && !this.isLoading && !this.openAppAdIds.isEmpty()) {
+            // v1.5.6 — exponential backoff after waterfall failures
+            if (System.currentTimeMillis() < waterfallBlockedUntilMs) {
+                Log.d(TAG, "fetchAd: backoff active for "
+                        + (waterfallBlockedUntilMs - System.currentTimeMillis()) + "ms");
+                return;
+            }
             this.isLoading = true;
             loadOpenAppWithWaterfall(new ArrayList<>(this.openAppAdIds));
         }
+    }
+
+    /**
+     * Configure the minimum interval (ms) between two consecutive app-open shows.
+     * Default 30s. Pass 0 to disable.
+     */
+    public void setMinShowIntervalMs(long ms) {
+        this.minShowIntervalMs = Math.max(0, ms);
     }
 
     private void loadOpenAppWithWaterfall(List<String> remainingIds) {
@@ -180,7 +205,10 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
             public void onAdsLoaded(AppOpenAd ad) {
                 AppOpenAdManager.this.appResumeAd = ad;
                 AppOpenAdManager.this.openAppID = adId;
+                AppOpenAdManager.this.loadTime = System.currentTimeMillis(); // v1.5.6 TTL
                 AppOpenAdManager.this.isLoading = false;
+                AppOpenAdManager.this.waterfallRetryAttempt = 0;             // v1.5.6 reset backoff
+                AppOpenAdManager.this.waterfallBlockedUntilMs = 0L;
                 long latency = System.currentTimeMillis() - appOpenLoadStart;
                 FirebaseAnalyticsEvents.getInstance().logLoadSuccess(
                         myApplication, PLACEMENT_APP_OPEN, adId, AdType.APP_OPEN, latency);
@@ -196,6 +224,11 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
                 remainingIds.remove(0);
                 if (remainingIds.isEmpty()) {
                     AppOpenAdManager.this.isLoading = false;
+                    // v1.5.6 — full waterfall failed; back off exponentially up to 60s
+                    waterfallRetryAttempt++;
+                    long backoff = Math.min(60_000L, 1000L * (1L << Math.min(6, waterfallRetryAttempt)));
+                    waterfallBlockedUntilMs = System.currentTimeMillis() + backoff;
+                    Log.w(TAG, "Waterfall failed; backing off " + backoff + "ms (attempt " + waterfallRetryAttempt + ")");
                 } else {
                     loadOpenAppWithWaterfall(remainingIds);
                 }
@@ -225,7 +258,15 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
     }
 
     public boolean isAdAvailable() {
-        return this.appResumeAd != null;
+        // v1.5.6 — enforce AdMob 4-hour expiry on cached app open ads
+        if (this.appResumeAd == null) return false;
+        if (this.loadTime > 0 && (System.currentTimeMillis() - this.loadTime) > AD_EXPIRY_MS) {
+            Log.d(TAG, "Cached app open ad expired (>4h); discarding");
+            this.appResumeAd = null;
+            this.loadTime = 0L;
+            return false;
+        }
+        return true;
     }
 
     public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
@@ -289,25 +330,33 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
                 }
 
                 (new Handler(android.os.Looper.getMainLooper())).postDelayed(() -> {
+                    // v1.5.6 — recheck activity + ad state inside the delayed runnable
+                    Activity act = this.currentActivity;
+                    AppOpenAd ad = this.appResumeAd;
+                    if (ad == null || act == null || act.isFinishing() || act.isDestroyed()) {
+                        Log.d(TAG, "Show aborted: activity gone or ad nulled");
+                        this.dismissDialogLoading();
+                        return;
+                    }
                     if (!AdsMobileAdsManager.getInstance().isShowLoadingDialog() || this.dialog != null && this.dialog.isShowing()) {
                         AdsMobileAdsManager.getInstance().log("Show OpenAd :" + this.openAppID);
-                        this.appResumeAd.setOnPaidEventListener(new OnPaidEventListener() {
+                        ad.setOnPaidEventListener(new OnPaidEventListener() {
                             @Override
                             public void onPaidEvent(@NonNull AdValue adValue) {
                                 AdjustEvents.getInstance().pushTrackEventAdmob(adValue);
-                                if(appResumeAd != null) {
-                                    FirebaseAnalyticsEvents.getInstance()
-                                            .logPaidAdImpression(currentActivity,
-                                                    adValue,
-                                                    appResumeAd.getAdUnitId(),
-                                                    appResumeAd.getResponseInfo(),
-                                                    AdType.APP_OPEN
-                                            );
-                                }
+                                FirebaseAnalyticsEvents.getInstance()
+                                        .logPaidAdImpression(act,
+                                                adValue,
+                                                ad.getAdUnitId(),
+                                                ad.getResponseInfo(),
+                                                AdType.APP_OPEN
+                                        );
                             }
                         });
-                        this.appResumeAd.show(this.currentActivity);
+                        ad.show(act);
+                        this.lastShownAtMs = System.currentTimeMillis();   // v1.5.6 cooldown
                         this.appResumeAd = null;
+                        this.loadTime = 0L;
                     }
 
                 }, this.timeShowLoading);
@@ -353,12 +402,34 @@ public class AppOpenAdManager implements Application.ActivityLifecycleCallbacks,
             Log.d("AppOpenManager", "showAdIfAvailable: currentActivity is null");
             return;
         }
+        // v1.5.6 — guard against finishing/destroyed activities
+        if (this.currentActivity.isFinishing() || this.currentActivity.isDestroyed()) {
+            Log.d("AppOpenManager", "showAdIfAvailable: activity finishing/destroyed");
+            return;
+        }
         if (!AdsMobileAdsManager.getInstance().isAdsEnabled()) {
             Log.d("AppOpenManager", "showAdIfAvailable: ads disabled");
             return;
         }
         if (!ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(State.STARTED)) {
             Log.d("AppOpenManager", "showAdIfAvailable: app not in foreground");
+            return;
+        }
+        // v1.5.6 — skip cold-start (let splash/first-screen own the first impression)
+        if (!coldStartConsumed) {
+            coldStartConsumed = true;
+            Log.d("AppOpenManager", "showAdIfAvailable: skipping cold start");
+            FirebaseAnalyticsEvents.getInstance().logShowBlocked(
+                    currentActivity, PLACEMENT_APP_OPEN, AdType.APP_OPEN, "cold_start");
+            this.fetchAd();
+            return;
+        }
+        // v1.5.6 — session cooldown: prevent foreground-bounce abuse
+        long sinceLast = System.currentTimeMillis() - lastShownAtMs;
+        if (lastShownAtMs > 0 && sinceLast < minShowIntervalMs) {
+            Log.d("AppOpenManager", "showAdIfAvailable: cooldown (" + sinceLast + "ms < " + minShowIntervalMs + "ms)");
+            FirebaseAnalyticsEvents.getInstance().logShowBlocked(
+                    currentActivity, PLACEMENT_APP_OPEN, AdType.APP_OPEN, "cooldown");
             return;
         }
         if (!this.isAdAvailable()) {

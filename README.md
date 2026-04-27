@@ -2,6 +2,25 @@
 
 Full-featured Android ad monetization library with AdMob, mediation, auto-refresh, preload, fallback pool, and lifecycle management.
 
+## What's new in 1.5.7
+
+Custom Remote Config keys per placement. Apps integrating into existing codebases can now reuse their own Firebase Remote Config keys (e.g. `show_inter_save`, `inter_save_ad_id`) instead of being forced to rename them to the library's auto-derived `ad_{type}_{position}_enabled` / `ad_{type}_{position}_ads` pattern. Two new builder methods on `PlacementConfig`:
+
+```java
+new PlacementConfig.Builder()
+    .setAdUnitIds(Arrays.asList("ca-app-pub-.../save_default"))
+    .setRemoteEnabledKey("show_inter_save")          // existing app's RC key
+    .setRemoteAdUnitsKey("inter_save_ad_id")         // existing app's RC key
+    .setEnabled(true)
+    .build();
+```
+
+The ad-units value is format-detected automatically — JSON array (starts with `[`) is parsed as the existing `RemoteAdUnit` priority list, anything else is split as comma- or whitespace-separated plain ad unit IDs. Empty string (default) keeps the auto-derived behavior, so this is fully backwards compatible.
+
+## What's new in 1.5.6
+
+A defensive hardening release — no new features, just bug fixes and AdMob policy compliance. App Open ads now enforce the 4-hour TTL, a cold-start gate, and a 30s session cooldown. The preload queue drops stale cached ads before serving, exponential backoff (`min(60s, 1000 * 2^attempt)`) replaces NO_FILL request storms, and `BannerAdManager.bindLifecycle(...)` wires `pause/resume/destroy` to a `LifecycleOwner` to prevent memory leaks and invalid impressions from offscreen banners.
+
 ## What's new in 1.5.5
 
 - **Collapsible banners** — Per-placement TOP/BOTTOM anchored collapsible banners via `setCollapsibleAnchor(...)`. Standard banners unchanged.
@@ -33,7 +52,7 @@ maven {
 }
 
 // app/build.gradle
-implementation 'com.adoreapps.ai:ads:1.5.5'
+implementation 'com.adoreapps.ai:ads:1.5.7'
 ```
 
 ## Quick Start

@@ -20,16 +20,26 @@ import com.adoreapps.ai.ads.core.AdsMobileAdsManager;
 import com.adoreapps.ai.ads.consent.ConsentManager;
 import com.adoreapps.ai.ads.billing.PurchaseManager;
 
+import com.google.android.gms.ads.AdView;
+
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
+
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BannerAdManager {
 
-    private final Map<String, AdUnitsConfig> bannerAdMap = new HashMap<>();
-    private final Map<String, BannerSize> bannerSizeMap = new HashMap<>();
-    private final Map<String, CollapsibleAnchor> collapsibleAnchorMap = new HashMap<>();
+    // v1.5.6 — concurrent maps; managers are singletons accessed from load callbacks + UI
+    private final Map<String, AdUnitsConfig> bannerAdMap = new ConcurrentHashMap<>();
+    private final Map<String, BannerSize> bannerSizeMap = new ConcurrentHashMap<>();
+    private final Map<String, CollapsibleAnchor> collapsibleAnchorMap = new ConcurrentHashMap<>();
+    // v1.5.6 — track active AdViews per placement for lifecycle pause/resume/destroy
+    private final Map<String, WeakReference<AdView>> activeBannerViews = new ConcurrentHashMap<>();
     private BannerSize defaultBannerSize = BannerSize.ADAPTIVE_LARGE;
 
     public static final String BANNER_SPLASH = "BANNER_SPLASH";
@@ -82,6 +92,84 @@ public class BannerAdManager {
     public CollapsibleAnchor getCollapsibleAnchor(String placement) {
         CollapsibleAnchor a = collapsibleAnchorMap.get(placement);
         return a != null ? a : CollapsibleAnchor.NONE;
+    }
+
+    // =========================================================
+    // v1.5.6 — LIFECYCLE WIRING (pause/resume/destroy)
+    // =========================================================
+
+    /** Locate the AdView nested inside a banner FrameLayout, or null if none. */
+    private AdView findAdView(FrameLayout container) {
+        if (container == null) return null;
+        for (int i = 0; i < container.getChildCount(); i++) {
+            View child = container.getChildAt(i);
+            if (child instanceof AdView) return (AdView) child;
+        }
+        return null;
+    }
+
+    /**
+     * Bind a banner placement to a {@link LifecycleOwner} (Activity / Fragment).
+     * Automatically calls {@code AdView.pause()} on STOP, {@code resume()} on
+     * START, and {@code destroy()} on DESTROY — preventing memory leaks and
+     * invalid impressions from offscreen banners.
+     *
+     * <p>Call this once after {@link #loadAndShowBannerAd} for each
+     * banner-hosting screen.
+     */
+    public void bindLifecycle(LifecycleOwner owner, String placement, FrameLayout bannerAdView) {
+        if (owner == null || placement == null || bannerAdView == null) return;
+        final WeakReference<FrameLayout> containerRef = new WeakReference<>(bannerAdView);
+        final String key = placement;
+        owner.getLifecycle().addObserver(new DefaultLifecycleObserver() {
+            @Override public void onStart(LifecycleOwner o) {
+                AdView v = findAdView(containerRef.get());
+                if (v != null) v.resume();
+            }
+            @Override public void onStop(LifecycleOwner o) {
+                AdView v = findAdView(containerRef.get());
+                if (v != null) v.pause();
+            }
+            @Override public void onDestroy(LifecycleOwner o) {
+                FrameLayout c = containerRef.get();
+                AdView v = findAdView(c);
+                if (v != null) {
+                    v.destroy();
+                    if (c != null) c.removeView(v);
+                }
+                activeBannerViews.remove(key);
+                o.getLifecycle().removeObserver(this);
+            }
+        });
+        AdView existing = findAdView(bannerAdView);
+        if (existing != null) {
+            activeBannerViews.put(placement, new WeakReference<>(existing));
+        }
+    }
+
+    /** Pause all tracked banner AdViews (call from Activity.onPause for non-lifecycle hosts). */
+    public void pauseAll() {
+        for (WeakReference<AdView> ref : activeBannerViews.values()) {
+            AdView v = ref.get();
+            if (v != null) v.pause();
+        }
+    }
+
+    /** Resume all tracked banner AdViews. */
+    public void resumeAll() {
+        for (WeakReference<AdView> ref : activeBannerViews.values()) {
+            AdView v = ref.get();
+            if (v != null) v.resume();
+        }
+    }
+
+    /** Destroy all tracked banner AdViews and clear the registry. */
+    public void destroyAll() {
+        for (WeakReference<AdView> ref : activeBannerViews.values()) {
+            AdView v = ref.get();
+            if (v != null) v.destroy();
+        }
+        activeBannerViews.clear();
     }
 
     private static volatile BannerAdManager instance;

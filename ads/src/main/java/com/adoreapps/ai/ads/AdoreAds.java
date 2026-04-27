@@ -311,21 +311,53 @@ public final class AdoreAds {
             // Convert "NATIVE_HOME" → "home", "INTER_SAVE" → "save", "REWARD_BONUS" → "bonus"
             String position = toShortPosition(key);
 
-            // Enable/disable toggle
-            String enabledKey = "ad_" + type + "_" + position + "_enabled";
+            // v1.5.7 — prefer explicit per-placement RC key when set; otherwise
+            // fall back to auto-derived "ad_{type}_{position}_enabled".
+            String enabledKey = pc.hasRemoteEnabledKey()
+                    ? pc.getRemoteEnabledKey()
+                    : ("ad_" + type + "_" + position + "_enabled");
             boolean enabled = rcm.getBoolean(enabledKey, pc.isEnabled());
             pc.setEnabled(enabled);
 
-            // Ad unit ID override (JSON array)
-            String adsKey = "ad_" + type + "_" + position + "_ads";
-            String json = rcm.getJson(adsKey);
-            if (json != null && !json.trim().isEmpty()) {
-                List<String> remoteIds = RemoteAdUnit.toSortedAdIds(json);
+            // v1.5.7 — same for the ad-units key. The custom key value can be:
+            //   1. JSON array of RemoteAdUnit (existing format), OR
+            //   2. Plain string with one or more ad unit IDs (comma/whitespace
+            //      separated) — common in legacy apps that store a single ID.
+            String adsKey = pc.hasRemoteAdUnitsKey()
+                    ? pc.getRemoteAdUnitsKey()
+                    : ("ad_" + type + "_" + position + "_ads");
+            String raw = rcm.getString(adsKey, "");
+            if (raw != null && !raw.trim().isEmpty()) {
+                List<String> remoteIds = parseAdIdsValue(raw);
                 if (!remoteIds.isEmpty()) {
                     pc.setAdUnitIds(remoteIds);
                 }
             }
         }
+    }
+
+    /**
+     * v1.5.7 — Parse a Remote Config value into a list of ad unit IDs.
+     * Supports both formats so apps can reuse existing keys verbatim:
+     * <ul>
+     *   <li>JSON array of {@code RemoteAdUnit} objects (priority-sorted)</li>
+     *   <li>Comma- or whitespace-separated plain ad unit IDs (single ID
+     *       is the common legacy case)</li>
+     * </ul>
+     */
+    private static List<String> parseAdIdsValue(String raw) {
+        String trimmed = raw.trim();
+        if (trimmed.startsWith("[")) {
+            // JSON array of RemoteAdUnit objects
+            return RemoteAdUnit.toSortedAdIds(trimmed);
+        }
+        // Plain comma- or whitespace-separated ad unit IDs
+        List<String> ids = new java.util.ArrayList<>();
+        for (String part : trimmed.split("[,\\s]+")) {
+            String id = part.trim();
+            if (!id.isEmpty()) ids.add(id);
+        }
+        return ids;
     }
 
     /**

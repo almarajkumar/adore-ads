@@ -281,6 +281,13 @@ public class AdsMobileAdsManager {
     }
 
     public void setUseTestAdIds(boolean isUseTestAdIds) {
+        // v1.5.6 — refuse to enable test IDs in release builds (account safety:
+        // a left-in test toggle in production would otherwise ship test ad IDs
+        // and earn no revenue while looking healthy).
+        if (isUseTestAdIds && !com.adoreapps.ai.ads.BuildConfig.DEBUG) {
+            Log.w("AdsMobileAdsManager", "setUseTestAdIds(true) ignored in release build");
+            return;
+        }
         this.isUseTestAdIds = isUseTestAdIds;
     }
 

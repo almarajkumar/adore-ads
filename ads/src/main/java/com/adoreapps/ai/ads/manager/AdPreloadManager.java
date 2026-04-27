@@ -19,11 +19,10 @@ import com.google.android.gms.ads.rewarded.RewardedAd;
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 
 import java.lang.reflect.Method;
-import java.util.ArrayDeque;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Manages ad preloading for interstitial, rewarded, and app open formats.
@@ -71,21 +70,62 @@ public class AdPreloadManager {
 
     private final boolean nativeApiAvailable;
 
-    // Manual fallback queues per placement key
-    private final Map<String, Queue<InterstitialAd>> interstitialQueues = new HashMap<>();
-    private final Map<String, Queue<RewardedAd>> rewardQueues = new HashMap<>();
-    private final Map<String, Queue<AppOpenAd>> appOpenQueues = new HashMap<>();
+    // v1.5.6 — TTLs per AdMob policy
+    private static final long INTERSTITIAL_TTL_MS = 60L * 60 * 1000;     // 60 min
+    private static final long REWARD_TTL_MS = 60L * 60 * 1000;           // 60 min
+    private static final long APP_OPEN_TTL_MS = 4L * 60 * 60 * 1000;     // 4 hours
+
+    // v1.5.6 — backoff for failing placements (manual preload)
+    private final Map<String, Long> blockedUntilMs = new ConcurrentHashMap<>();
+    private final Map<String, Integer> retryAttempts = new ConcurrentHashMap<>();
+
+    /** v1.5.6 — wraps a cached ad with its load timestamp for TTL enforcement. */
+    private static final class Holder<T> {
+        final T ad;
+        final long loadedAtMs;
+        Holder(T ad) {
+            this.ad = ad;
+            this.loadedAtMs = System.currentTimeMillis();
+        }
+        boolean isExpired(long ttlMs) {
+            return (System.currentTimeMillis() - loadedAtMs) > ttlMs;
+        }
+    }
+
+    // Manual fallback queues per placement key (now holding timestamped wrappers)
+    private final Map<String, Queue<Holder<InterstitialAd>>> interstitialQueues = new ConcurrentHashMap<>();
+    private final Map<String, Queue<Holder<RewardedAd>>> rewardQueues = new ConcurrentHashMap<>();
+    private final Map<String, Queue<Holder<AppOpenAd>>> appOpenQueues = new ConcurrentHashMap<>();
 
     // Placement key -> ad unit ID mapping (for replenish)
-    private final Map<String, String> interstitialAdIds = new HashMap<>();
-    private final Map<String, String> rewardAdIds = new HashMap<>();
-    private final Map<String, String> appOpenAdIds = new HashMap<>();
+    private final Map<String, String> interstitialAdIds = new ConcurrentHashMap<>();
+    private final Map<String, String> rewardAdIds = new ConcurrentHashMap<>();
+    private final Map<String, String> appOpenAdIds = new ConcurrentHashMap<>();
 
     // Per-placement buffer size
-    private final Map<String, Integer> bufferSizes = new HashMap<>();
+    private final Map<String, Integer> bufferSizes = new ConcurrentHashMap<>();
 
     // Loading flags (avoid duplicate requests)
-    private final Map<String, Boolean> loading = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, Boolean> loading = new ConcurrentHashMap<>();
+
+    /** v1.5.6 — exponential backoff gate; returns true if a retry is allowed now. */
+    private boolean backoffAllowsRetry(String key) {
+        Long until = blockedUntilMs.get(key);
+        return until == null || System.currentTimeMillis() >= until;
+    }
+
+    private void noteFailure(String key) {
+        int attempt = retryAttempts.getOrDefault(key, 0) + 1;
+        retryAttempts.put(key, attempt);
+        long backoff = Math.min(60_000L, 1000L * (1L << Math.min(6, attempt)));
+        blockedUntilMs.put(key, System.currentTimeMillis() + backoff);
+        Log.w(TAG, "Preload backoff " + backoff + "ms for " + key + " (attempt " + attempt + ")");
+    }
+
+    private void noteSuccess(String key) {
+        retryAttempts.remove(key);
+        blockedUntilMs.remove(key);
+    }
 
     // =========================================================
     // DETECTION
@@ -154,19 +194,23 @@ public class AdPreloadManager {
     }
 
     private void manualPreloadInterstitial(Context context, String placementKey) {
-        Queue<InterstitialAd> queue = interstitialQueues.get(placementKey);
+        final String backoffKey = "inter_" + placementKey;
+        if (!backoffAllowsRetry(backoffKey)) return;
+        Queue<Holder<InterstitialAd>> queue = interstitialQueues.get(placementKey);
         if (queue == null) {
-            queue = new ArrayDeque<>();
+            queue = new ConcurrentLinkedQueue<>();
             interstitialQueues.put(placementKey, queue);
         }
         int target = bufferSizes.getOrDefault(placementKey, 1);
+        // drop expired before computing fill
+        dropExpired(queue, INTERSTITIAL_TTL_MS);
         if (queue.size() >= target) return;
-        if (Boolean.TRUE.equals(loading.get("inter_" + placementKey))) return;
-        loading.put("inter_" + placementKey, true);
+        if (Boolean.TRUE.equals(loading.get(backoffKey))) return;
+        loading.put(backoffKey, true);
 
         String adUnitId = interstitialAdIds.get(placementKey);
         if (adUnitId == null) {
-            loading.put("inter_" + placementKey, false);
+            loading.put(backoffKey, false);
             return;
         }
 
@@ -174,13 +218,13 @@ public class AdPreloadManager {
             @Override
             public void onResultInterstitialAd(ApInterstitialAd interstitialAd) {
                 super.onResultInterstitialAd(interstitialAd);
-                Queue<InterstitialAd> q = interstitialQueues.get(placementKey);
+                Queue<Holder<InterstitialAd>> q = interstitialQueues.get(placementKey);
                 if (q != null && interstitialAd != null && interstitialAd.getInterstitialAd() != null) {
-                    q.offer(interstitialAd.getInterstitialAd());
+                    q.offer(new Holder<>(interstitialAd.getInterstitialAd()));
                     Log.d(TAG, "Preloaded interstitial for " + placementKey + " (" + q.size() + "/" + target + ")");
+                    noteSuccess(backoffKey);
                 }
-                loading.put("inter_" + placementKey, false);
-                // Fill up to buffer
+                loading.put(backoffKey, false);
                 if (q != null && q.size() < target) {
                     manualPreloadInterstitial(context, placementKey);
                 }
@@ -189,10 +233,20 @@ public class AdPreloadManager {
             @Override
             public void onAdFailedToLoad(@NonNull ApAdError error) {
                 super.onAdFailedToLoad(error);
-                loading.put("inter_" + placementKey, false);
+                loading.put(backoffKey, false);
+                noteFailure(backoffKey);
                 Log.w(TAG, "Preload interstitial failed for " + placementKey);
             }
         });
+    }
+
+    /** Drop expired holders from the head of the queue. */
+    private static <T> void dropExpired(Queue<Holder<T>> queue, long ttl) {
+        if (queue == null) return;
+        Holder<T> head;
+        while ((head = queue.peek()) != null && head.isExpired(ttl)) {
+            queue.poll();
+        }
     }
 
     /**
@@ -208,11 +262,13 @@ public class AdPreloadManager {
             ad = pollNativeInterstitial(placementKey);
         }
 
-        // Fall back to manual queue
+        // Fall back to manual queue (drop expired first)
         if (ad == null) {
-            Queue<InterstitialAd> queue = interstitialQueues.get(placementKey);
+            Queue<Holder<InterstitialAd>> queue = interstitialQueues.get(placementKey);
+            dropExpired(queue, INTERSTITIAL_TTL_MS);
             if (queue != null && !queue.isEmpty()) {
-                ad = queue.poll();
+                Holder<InterstitialAd> h = queue.poll();
+                if (h != null) ad = h.ad;
             }
         }
 
@@ -247,7 +303,8 @@ public class AdPreloadManager {
             } catch (Throwable ignored) {
             }
         }
-        Queue<InterstitialAd> queue = interstitialQueues.get(placementKey);
+        Queue<Holder<InterstitialAd>> queue = interstitialQueues.get(placementKey);
+        dropExpired(queue, INTERSTITIAL_TTL_MS);
         return queue != null && !queue.isEmpty();
     }
 
@@ -264,19 +321,22 @@ public class AdPreloadManager {
     }
 
     private void manualPreloadReward(Context context, String placementKey) {
-        Queue<RewardedAd> queue = rewardQueues.get(placementKey);
+        final String backoffKey = "reward_" + placementKey;
+        if (!backoffAllowsRetry(backoffKey)) return;
+        Queue<Holder<RewardedAd>> queue = rewardQueues.get(placementKey);
         if (queue == null) {
-            queue = new ArrayDeque<>();
+            queue = new ConcurrentLinkedQueue<>();
             rewardQueues.put(placementKey, queue);
         }
         int target = bufferSizes.getOrDefault(placementKey, 1);
+        dropExpired(queue, REWARD_TTL_MS);
         if (queue.size() >= target) return;
-        if (Boolean.TRUE.equals(loading.get("reward_" + placementKey))) return;
-        loading.put("reward_" + placementKey, true);
+        if (Boolean.TRUE.equals(loading.get(backoffKey))) return;
+        loading.put(backoffKey, true);
 
         String adUnitId = rewardAdIds.get(placementKey);
         if (adUnitId == null) {
-            loading.put("reward_" + placementKey, false);
+            loading.put(backoffKey, false);
             return;
         }
 
@@ -284,12 +344,13 @@ public class AdPreloadManager {
             @Override
             public void onAdLoaded(@NonNull RewardedAd rewardedAd) {
                 super.onAdLoaded(rewardedAd);
-                Queue<RewardedAd> q = rewardQueues.get(placementKey);
+                Queue<Holder<RewardedAd>> q = rewardQueues.get(placementKey);
                 if (q != null) {
-                    q.offer(rewardedAd);
+                    q.offer(new Holder<>(rewardedAd));
                     Log.d(TAG, "Preloaded reward for " + placementKey + " (" + q.size() + "/" + target + ")");
+                    noteSuccess(backoffKey);
                 }
-                loading.put("reward_" + placementKey, false);
+                loading.put(backoffKey, false);
                 if (q != null && q.size() < target) {
                     manualPreloadReward(context, placementKey);
                 }
@@ -298,7 +359,8 @@ public class AdPreloadManager {
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
                 super.onAdFailedToLoad(loadAdError);
-                loading.put("reward_" + placementKey, false);
+                loading.put(backoffKey, false);
+                noteFailure(backoffKey);
                 Log.w(TAG, "Preload reward failed for " + placementKey);
             }
         });
@@ -306,16 +368,18 @@ public class AdPreloadManager {
 
     @Nullable
     public synchronized RewardedAd pollReward(Context context, String placementKey) {
-        Queue<RewardedAd> queue = rewardQueues.get(placementKey);
-        RewardedAd ad = (queue != null) ? queue.poll() : null;
+        Queue<Holder<RewardedAd>> queue = rewardQueues.get(placementKey);
+        dropExpired(queue, REWARD_TTL_MS);
+        Holder<RewardedAd> h = (queue != null) ? queue.poll() : null;
         if (context != null) {
             manualPreloadReward(context, placementKey);
         }
-        return ad;
+        return h != null ? h.ad : null;
     }
 
     public boolean hasReward(String placementKey) {
-        Queue<RewardedAd> queue = rewardQueues.get(placementKey);
+        Queue<Holder<RewardedAd>> queue = rewardQueues.get(placementKey);
+        dropExpired(queue, REWARD_TTL_MS);
         return queue != null && !queue.isEmpty();
     }
 
@@ -333,19 +397,22 @@ public class AdPreloadManager {
 
     public synchronized void storeAppOpen(String placementKey, AppOpenAd ad) {
         if (placementKey == null || ad == null) return;
-        Queue<AppOpenAd> queue = appOpenQueues.get(placementKey);
+        Queue<Holder<AppOpenAd>> queue = appOpenQueues.get(placementKey);
         if (queue == null) {
-            queue = new ArrayDeque<>();
+            queue = new ConcurrentLinkedQueue<>();
             appOpenQueues.put(placementKey, queue);
         }
         int target = bufferSizes.getOrDefault(placementKey, 1);
-        if (queue.size() < target) queue.offer(ad);
+        dropExpired(queue, APP_OPEN_TTL_MS);
+        if (queue.size() < target) queue.offer(new Holder<>(ad));
     }
 
     @Nullable
     public synchronized AppOpenAd pollAppOpen(String placementKey) {
-        Queue<AppOpenAd> queue = appOpenQueues.get(placementKey);
-        return (queue != null) ? queue.poll() : null;
+        Queue<Holder<AppOpenAd>> queue = appOpenQueues.get(placementKey);
+        dropExpired(queue, APP_OPEN_TTL_MS);
+        Holder<AppOpenAd> h = (queue != null) ? queue.poll() : null;
+        return h != null ? h.ad : null;
     }
 
     // =========================================================
@@ -360,6 +427,8 @@ public class AdPreloadManager {
         rewardQueues.clear();
         appOpenQueues.clear();
         loading.clear();
+        blockedUntilMs.clear();
+        retryAttempts.clear();
 
         if (nativeApiAvailable) {
             try {

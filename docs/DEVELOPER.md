@@ -20,7 +20,8 @@ com.adoreapps.ai.ads/
 │   ├── NativeAdManager.java       <- Auto-refresh, parallel preload, cache, expiry, fallback
 │   ├── InterstitialAdManager.java <- Singleton, cooldown timer, priority waterfall
 │   ├── RewardAdManager.java       <- Singleton, caching, expiry, auto-replenish
-│   ├── BannerAdManager.java       <- Singleton, waterfall + default fallback, configurable size
+│   ├── BannerAdManager.java       <- Singleton, waterfall + default fallback, configurable size (v1.5.6: ConcurrentHashMap, lifecycle binding)
+│   ├── AdPreloadManager.java      <- (v1.5.6: Holder<T> TTL, ConcurrentLinkedQueue, exponential backoff)
 │   └── DefaultAdPool.java         <- Global fallback pool (native, interstitial, reward)
 │
 ├── consent/
@@ -534,10 +535,117 @@ export GITHUB_OWNER=adoreapps  # GitHub org or user
 ./gradlew :ads:publishReleasePublicationToGitHubPackagesRepository
 ```
 
+## v1.5.6 — Defensive Hardening
+
+A bug-fix and policy-compliance release. No new managers, no new wrapper types — the architecture stays put. The changes below tighten TTL/cooldown enforcement, swap fragile collections for concurrent ones, and add one new lifecycle entry point on `BannerAdManager`.
+
+### `Holder<T>` TTL pattern in `AdPreloadManager`
+
+Every cached ad in the preload queues is wrapped in a `Holder` that records the load timestamp. On `poll()`, holders past their format-specific TTL are discarded instead of returned, so stale-cache impressions can't be served:
+
+```java
+private static final class Holder<T> {
+    final T ad;
+    final long loadedAtMs;
+}
+
+private static final long TTL_INTERSTITIAL_MS = 60L * 60 * 1000;   // 60 min
+private static final long TTL_REWARDED_MS     = 60L * 60 * 1000;   // 60 min
+private static final long TTL_APP_OPEN_MS     =  4L * 60 * 60 * 1000; // 4 hr (AdMob policy)
+```
+
+The TTL constants line up with AdMob's documented cache lifetime. Anything older is dropped on poll, and the preload pump is nudged to refill.
+
+### Dual-key timestamp index in `NativeAdManager`
+
+The native expiry check had a silent bug: writes used the carousel `position` as the key, while reads at show time looked up by `unitID`, so the TTL gate never fired. Fixed by maintaining a parallel index:
+
+```java
+private final Map<Integer, Long> adLoadTimestamps;       // keyed by position (existing)
+private final Map<String,  Long> adLoadTimestampsByUnit; // keyed by ad unit ID (new in 1.5.6)
+```
+
+Both are written on a successful native load. `isAdExpired(unitID)` now hits the `byUnit` index and actually rejects expired ads at show time.
+
+### Exponential backoff (shared between AppOpen and Preload)
+
+Both `AppOpenAdManager.loadOpenAppWithWaterfall` and the three `AdPreloadManager` paths (interstitial / rewarded / app open) now back off after a failed load:
+
+```java
+long backoffMs = Math.min(60_000L, 1000L * (1L << attempt));
+```
+
+Capped at 60s, reset to 0 on first success. Stops the NO_FILL request storms that AdMob can flag as low-quality traffic.
+
+### `BannerAdManager.bindLifecycle` flow
+
+```
+bindLifecycle(LifecycleOwner, placementKey, FrameLayout container)
+   |-- store WeakReference<FrameLayout> keyed by placement
+   |-- attach DefaultLifecycleObserver to LifecycleOwner
+   '-- on lifecycle event:
+       |-- onStart  -> walk container children, find AdView, AdView.resume()
+       |-- onStop   -> walk container children, find AdView, AdView.pause()
+       '-- onDestroy-> walk container children, find AdView, AdView.destroy() + clear ref
+```
+
+The `WeakReference` avoids retaining the host activity; child-walking the FrameLayout means apps don't have to pass us the `AdView` directly. `pauseAll() / resumeAll() / destroyAll()` apply the same operation across every bound container for non-lifecycle hosts.
+
+### Release-build test-ID guard
+
+`AdsMobileAdsManager.setUseTestAdIds(true)` is now a no-op in release builds:
+
+```java
+public void setUseTestAdIds(boolean enabled) {
+    if (enabled && !BuildConfig.DEBUG) {
+        // silently ignored in release — prevents test ad IDs from shipping
+        return;
+    }
+    this.useTestAdIds = enabled;
+}
+```
+
+This requires `BuildConfig` to exist on the library, so `ads/build.gradle` now sets:
+
+```groovy
+android {
+    buildFeatures { buildConfig true }
+}
+```
+
+Apps don't need any change — `BuildConfig.DEBUG` is read from the library's own generated class.
+
+## v1.5.7 — Custom Remote Config keys
+
+Additive feature release. `PlacementConfig` now lets each placement point at app-defined Remote Config keys instead of the auto-derived `ad_{type}_{position}_enabled` / `ad_{type}_{position}_ads` pair. Useful for apps integrating the library into a codebase that already ships its own RC schema.
+
+### Touch points
+
+| File | Change |
+|------|--------|
+| `PlacementConfig.java` | Two new fields: `remoteEnabledKey` (String, default `""`) and `remoteAdUnitsKey` (String, default `""`). Matching `setRemoteEnabledKey(...)` / `setRemoteAdUnitsKey(...)` builder methods + getters. |
+| `AdoreAds.applyPlacementOverrides` | Preference logic — if `remoteEnabledKey` is non-empty, read that key as a boolean from Remote Config; else fall back to the auto-derived `ad_{type}_{position}_enabled`. Same fallback shape for ad units, routed through the new format-detection helper. |
+| `AdoreAds.parseAdIdsValue` | New helper that takes the raw RC string and decides how to parse it. |
+
+### Format detection
+
+`parseAdIdsValue(String raw)` rule:
+
+```
+trimmed.startsWith("[")  -> RemoteAdUnit.toSortedAdIds(raw)        // existing JSON path
+otherwise                -> Arrays.asList(raw.split("[,\\s]+"))    // plain IDs (single or list)
+```
+
+The split regex tolerates comma-separated, whitespace-separated, and the common legacy case of a single ad unit ID. Empty / blank values are treated as "no override" by the caller.
+
+### Backwards compatibility
+
+When both `remoteEnabledKey` and `remoteAdUnitsKey` are empty (the default), `applyPlacementOverrides` takes the legacy auto-derived path unchanged. The new helper is only invoked when an override key is explicitly set, so existing apps see no behavior change.
+
 ### Version Bump
 Edit `ads/build.gradle`:
 ```groovy
-version = '1.5.5'  // Change here
+version = '1.5.7'  // Change here
 ```
 
 ## Dependencies Included

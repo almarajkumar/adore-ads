@@ -40,7 +40,7 @@ In your app's `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'com.adoreapps.ai:ads:1.5.5'
+    implementation 'com.adoreapps.ai:ads:1.5.7'
 }
 ```
 
@@ -321,6 +321,16 @@ BannerAdManager.getInstance().setCollapsibleAnchor("BANNER_HOME", CollapsibleAnc
 
 When the anchor is non-NONE, the SDK adds the `collapsible` network extra to every ad unit ID in the placement waterfall.
 
+#### Banner lifecycle (v1.5.6)
+
+Bind banners to a `LifecycleOwner` so the SDK auto-pauses on `STOP`, resumes on `START`, and destroys on `DESTROY`:
+
+```java
+BannerAdManager.getInstance().bindLifecycle(this, "BANNER_HOME", bannerContainer);
+```
+
+Without this call, banners may leak their `AdView` and continue to accrue invalid impressions while offscreen. For non-lifecycle hosts (dialogs, custom containers), the manager also exposes `pauseAll()`, `resumeAll()`, and `destroyAll()`.
+
 ### App Open Ads
 
 ```java
@@ -332,6 +342,15 @@ AppOpenAdManager.getInstance().disableLoadAtActivity(SplashActivity.class);
 AppOpenAdManager.getInstance().enableAppResume();
 AppOpenAdManager.getInstance().disableAppResume();
 ```
+
+#### App Open tuning (v1.5.6)
+
+```java
+// Lengthen the session cooldown between two app-open shows (default 30,000ms)
+AppOpenAdManager.getInstance().setMinShowIntervalMs(60_000);
+```
+
+The first foreground transition after process start is auto-skipped so the splash / first screen owns the impression. Apps should **not** also call `showAdIfAvailable()` from their splash — it will be blocked with `block_reason="cold_start"`. Subsequent foreground transitions within the cooldown window are blocked with `block_reason="cooldown"`. Cached app-open ads past the AdMob 4-hour TTL are discarded and reloaded transparently.
 
 ### Consent (UMP)
 
@@ -430,6 +449,7 @@ Key format: `ad_{type}_{position}_{suffix}` where `position` is the lowercase pl
 | `ad_inter_{position}_ads` | JSON | Override ad unit IDs for an interstitial placement |
 | `ad_reward_{position}_ads` | JSON | Override ad unit IDs for a reward placement |
 | `ad_banner_{position}_ads` | JSON | Override ad unit IDs for a banner placement |
+| *(per-placement custom key)* | boolean / string | v1.5.7 — when `setRemoteEnabledKey(...)` / `setRemoteAdUnitsKey(...)` is set on a `PlacementConfig`, the library reads that exact key instead of the auto-derived one above |
 
 **JSON format for ad unit overrides** (set as string value in Firebase Console):
 
@@ -442,6 +462,26 @@ Key format: `ad_{type}_{position}_{suffix}` where `position` is the lowercase pl
 ```
 
 Priority order: `high` > `medium` > `low` > `default`. Only entries with `is_enabled: true` are used. This lets you A/B test individual floors without an app update.
+
+#### Reusing existing Remote Config keys (v1.5.7)
+
+Most apps that adopt the library mid-life already have Remote Config keys like `show_inter_save` (boolean) and `inter_save_ad_id` (single string ad unit ID), or sometimes a JSON array under `interstitial_save_ads`. Before v1.5.7, integrators had to either duplicate every key under the library's `ad_{type}_{position}_*` naming scheme or skip Remote Config entirely. As of v1.5.7, each `PlacementConfig` can point at the keys you already have — zero RC changes needed.
+
+```java
+.addInterstitialPlacement("INTER_SAVE", new PlacementConfig.Builder()
+    .setAdUnitIds(Arrays.asList("ca-app-pub-.../save_default"))
+    .setRemoteEnabledKey("show_inter_save")          // existing app's key
+    .setRemoteAdUnitsKey("inter_save_ad_id")         // existing app's key
+    .setEnabled(true)
+    .build())
+```
+
+When `remoteEnabledKey` is non-empty, the library reads that exact key (boolean) from Remote Config instead of `ad_inter_save_enabled`. When `remoteAdUnitsKey` is non-empty, the library reads that exact key (string) instead of `ad_inter_save_ads`, and **format-detects** the value:
+
+- If the value starts with `[` it is parsed as the existing JSON array of `RemoteAdUnit` objects (priority-sorted).
+- Otherwise it is parsed as comma- or whitespace-separated plain ad unit IDs. The common legacy case — a single ID like `"ca-app-pub-.../abc"` — works as-is.
+
+You can override only one key per placement. For example, set `setRemoteEnabledKey(...)` to gate enable/disable from your existing RC and leave `setRemoteAdUnitsKey` unset to keep the in-code ad units. Empty string (the default for both fields) preserves the auto-derived `ad_{type}_{position}_*` behavior, so this is fully backwards compatible.
 
 **Configure Adjust event tokens (v1.2.0):**
 ```java
@@ -478,7 +518,7 @@ Every ad manager auto-fires Firebase Analytics events tagged with the placement 
 | `ad_reward_earned` | Reward callback | `reward_type`, `reward_amount` |
 | `ad_cache_hit` | Preloaded ad served | — |
 | `ad_fallback_used` | Default pool / native backup served | `fallback_type` (`default_pool` \| `native_backup`) |
-| `ad_show_blocked` | Show prevented | `block_reason` (`premium` \| `no_consent` \| `cooldown` \| `no_ad_units` \| `activity_destroyed` \| `no_placement`) |
+| `ad_show_blocked` | Show prevented | `block_reason` (`premium` \| `no_consent` \| `cooldown` \| `cold_start` \| `no_ad_units` \| `activity_destroyed` \| `no_placement`) |
 | `ad_skipped` | User skipped full-screen native | `seconds_before_skip` |
 
 Wired managers: `InterstitialAdManager`, `RewardAdManager`, `NativeAdManager`, `BannerAdManager`, `AppOpenAdManager` (uses placement key `APP_OPEN_RESUME`), and `FullScreenNativeAdActivity`.

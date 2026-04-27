@@ -118,6 +118,9 @@ public class NativeAdManager {
     private final Map<String, PlacementConfig> placementConfigMap = new ConcurrentHashMap<>();
     private final Map<String, AdsResponse<NativeAd>> preloadedAds = new ConcurrentHashMap<>();
     private final Map<String, Long> adLoadTimestamps = new ConcurrentHashMap<>();
+    // v1.5.6 — parallel index by unitID so show-time TTL checks (which only know
+    // the AdsResponse) can resolve a load timestamp without the position key.
+    private final Map<String, Long> adLoadTimestampsByUnit = new ConcurrentHashMap<>();
     private final Map<String, AdStatus> adStatusMap = new ConcurrentHashMap<>();
 
     private static final long AD_EXPIRY_MS = AdConstants.AD_EXPIRY_MS;
@@ -126,6 +129,13 @@ public class NativeAdManager {
         Long loadTime = adLoadTimestamps.get(position);
         if (loadTime == null) return true;
         return (System.currentTimeMillis() - loadTime) > AD_EXPIRY_MS;
+    }
+
+    /** v1.5.6 — record load time under both keys so all callers can resolve TTL. */
+    private void recordLoadTime(String position, String unitId) {
+        long now = System.currentTimeMillis();
+        if (position != null) adLoadTimestamps.put(position, now);
+        if (unitId != null) adLoadTimestampsByUnit.put(unitId, now);
     }
 
     /**
@@ -457,7 +467,7 @@ public class NativeAdManager {
                 public void onNativeAds(ApAdNative nativeAd, String unitID) {
                     adStatusMap.put(position, AdStatus.LOADED);
                     preloadedAds.put(position, new AdsResponse<>(nativeAd.getNativeAd(), unitID));
-                    adLoadTimestamps.put(position, System.currentTimeMillis());
+                    recordLoadTime(position, unitID);
                     adCallback.onNativeAds(nativeAd, unitID);
                 }
 
@@ -497,7 +507,7 @@ public class NativeAdManager {
                             highFloorFilled[0] = true;
                             adStatusMap.put(position, AdStatus.LOADED);
                             preloadedAds.put(position, new AdsResponse<>(nativeAd.getNativeAd(), adId));
-                            adLoadTimestamps.put(position, System.currentTimeMillis());
+                            recordLoadTime(position, adId);
                             if (!callbackFired[0]) {
                                 callbackFired[0] = true;
                                 adCallback.onNativeAds(nativeAd, adId);
@@ -506,7 +516,7 @@ public class NativeAdManager {
                             // Lower floor filled first — use as fallback until high floor responds
                             adStatusMap.put(position, AdStatus.LOADED);
                             preloadedAds.put(position, new AdsResponse<>(nativeAd.getNativeAd(), adId));
-                            adLoadTimestamps.put(position, System.currentTimeMillis());
+                            recordLoadTime(position, adId);
                             if (!callbackFired[0]) {
                                 callbackFired[0] = true;
                                 adCallback.onNativeAds(nativeAd, adId);
@@ -611,7 +621,7 @@ public class NativeAdManager {
                             if (activity.isFinishing() || activity.isDestroyed()) return;
                             AdsResponse<NativeAd> ad = new AdsResponse<>(nativeAd.getNativeAd(), unitID);
                             preloadedAds.put(position, ad);
-                            adLoadTimestamps.put(position, System.currentTimeMillis());
+                            recordLoadTime(position, unitID);
                             adStatusMap.put(position, AdStatus.LOADED);
                             showNativeAd(activity, ad, placeHolder, layoutId, shimmer);
                             com.adoreapps.ai.ads.event.FirebaseAnalyticsEvents.getInstance().logShow(activity,
@@ -750,8 +760,8 @@ public class NativeAdManager {
             return;
         }
         if (adsResponse != null && adsResponse.getAds() != null) {
-            // Check if the ad has expired before showing
-            Long loadTime = adLoadTimestamps.get(adsResponse.getUnitID());
+            // v1.5.6 — Check if the ad has expired before showing (lookup by unit ID)
+            Long loadTime = adLoadTimestampsByUnit.get(adsResponse.getUnitID());
             if (loadTime != null && (System.currentTimeMillis() - loadTime) > AD_EXPIRY_MS) {
                 Log.d(TAG, "Ad expired at show time, destroying: " + adsResponse.getUnitID());
                 adsResponse.getAds().destroy();
@@ -1222,7 +1232,7 @@ public class NativeAdManager {
                             if (activity.isFinishing() || activity.isDestroyed()) return;
                             AdsResponse<NativeAd> newAd = new AdsResponse<>(nativeAd.getNativeAd(), unitID);
                             preloadedAds.put(position, newAd);
-                            adLoadTimestamps.put(position, System.currentTimeMillis());
+                            recordLoadTime(position, unitID);
                             adStatusMap.put(position, AdStatus.LOADED);
                             showNativeAd(activity, newAd, placeHolder, layoutId);
                             Log.d(TAG, "Refreshed: " + entryKey + " [" + position + "]");

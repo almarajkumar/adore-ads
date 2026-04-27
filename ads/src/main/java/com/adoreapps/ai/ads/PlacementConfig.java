@@ -44,6 +44,13 @@ public class PlacementConfig {
     // v1.5.5 — collapsible banner anchor (banner placements only)
     private CollapsibleAnchor collapsibleAnchor = CollapsibleAnchor.NONE;
 
+    // v1.5.7 — explicit Remote Config keys to override the auto-derived
+    // "ad_{type}_{position}_enabled" / "ad_{type}_{position}_ads" pattern.
+    // Set to a non-empty string to reuse existing app RC keys without renaming.
+    // Empty string (default) => fall back to the auto-derived key.
+    private String remoteEnabledKey = "";
+    private String remoteAdUnitsKey = "";
+
     public PlacementConfig(List<String> adUnitIds, boolean enabled,
                            String viewEventName, String clickEventName) {
         this.adUnitIds = adUnitIds != null ? new ArrayList<>(adUnitIds) : new ArrayList<>();
@@ -72,6 +79,8 @@ public class PlacementConfig {
         this.carouselCircular = b.carouselCircular;
         this.carouselAutoRefreshEnabled = b.carouselAutoRefreshEnabled;
         this.collapsibleAnchor = b.collapsibleAnchor != null ? b.collapsibleAnchor : CollapsibleAnchor.NONE;
+        this.remoteEnabledKey = b.remoteEnabledKey != null ? b.remoteEnabledKey : "";
+        this.remoteAdUnitsKey = b.remoteAdUnitsKey != null ? b.remoteAdUnitsKey : "";
     }
 
     // =========================================================
@@ -89,6 +98,10 @@ public class PlacementConfig {
     public boolean isCarouselCircular() { return carouselCircular; }
     public boolean isCarouselAutoRefreshEnabled() { return carouselAutoRefreshEnabled; }
     public CollapsibleAnchor getCollapsibleAnchor() { return collapsibleAnchor; }
+    public String getRemoteEnabledKey() { return remoteEnabledKey; }
+    public String getRemoteAdUnitsKey() { return remoteAdUnitsKey; }
+    public boolean hasRemoteEnabledKey() { return remoteEnabledKey != null && !remoteEnabledKey.isEmpty(); }
+    public boolean hasRemoteAdUnitsKey() { return remoteAdUnitsKey != null && !remoteAdUnitsKey.isEmpty(); }
 
     public boolean hasBackupNative() {
         return backupNativePlacementKey != null && !backupNativePlacementKey.isEmpty();
@@ -108,6 +121,8 @@ public class PlacementConfig {
     public void setCollapsibleAnchor(CollapsibleAnchor anchor) {
         this.collapsibleAnchor = anchor != null ? anchor : CollapsibleAnchor.NONE;
     }
+    public void setRemoteEnabledKey(String key) { this.remoteEnabledKey = key != null ? key : ""; }
+    public void setRemoteAdUnitsKey(String key) { this.remoteAdUnitsKey = key != null ? key : ""; }
 
     /**
      * Replace the ad unit IDs list (e.g. from remote config override).
@@ -135,6 +150,8 @@ public class PlacementConfig {
         private boolean carouselCircular = true;
         private boolean carouselAutoRefreshEnabled = false;
         private CollapsibleAnchor collapsibleAnchor = CollapsibleAnchor.NONE;
+        private String remoteEnabledKey = "";
+        private String remoteAdUnitsKey = "";
 
         public Builder setAdUnitIds(List<String> ids) {
             this.adUnitIds = ids != null ? new ArrayList<>(ids) : new ArrayList<>();
@@ -158,6 +175,33 @@ public class PlacementConfig {
          */
         public Builder setCollapsibleAnchor(CollapsibleAnchor anchor) {
             this.collapsibleAnchor = anchor != null ? anchor : CollapsibleAnchor.NONE;
+            return this;
+        }
+        /**
+         * Override the auto-derived Remote Config "enabled" key (default
+         * {@code "ad_{type}_{position}_enabled"}) with an explicit key from
+         * your existing app — e.g. {@code "show_inter_save"}.
+         * <p>Pass an empty string (default) to keep the auto-derived key.
+         */
+        public Builder setRemoteEnabledKey(String key) {
+            this.remoteEnabledKey = key != null ? key : "";
+            return this;
+        }
+        /**
+         * Override the auto-derived Remote Config "ad units" key (default
+         * {@code "ad_{type}_{position}_ads"}) with an explicit key from your
+         * existing app — e.g. {@code "inter_save_ad_id"} (single ID) or
+         * {@code "inter_save_ads"} (JSON array of {@code RemoteAdUnit}).
+         * <p>The library auto-detects the value format:
+         * <ul>
+         *   <li>Starts with {@code "["} → JSON array of {@code RemoteAdUnit}
+         *       objects (sorted by priority).</li>
+         *   <li>Otherwise → comma- / whitespace-separated list of plain
+         *       ad unit IDs (single ID is the common case).</li>
+         * </ul>
+         */
+        public Builder setRemoteAdUnitsKey(String key) {
+            this.remoteAdUnitsKey = key != null ? key : "";
             return this;
         }
 
